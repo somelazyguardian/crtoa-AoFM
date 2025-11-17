@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>CR:TOA Altar of Forgotten Memories Solver</title>
+<title>CR:TOA Maximum Rift Resistance Optimizer</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
   :root{
@@ -12,41 +12,39 @@
     --accent:#cfe8ff;
     --card:#0b1220;
     --card-border: rgba(255,255,255,0.04);
+    --rare:#2679F8;
+    --epic:#D85FFF;
+    --super:#F84747;
     --highlight: rgba(255,193,7,0.85);
   }
   html,body{height:100%;width:100%;margin:0;padding:10px;background:var(--bg);color:var(--accent);font-family:system-ui, -apple-system, "Segoe UI", Roboto, Arial;box-sizing:border-box;}
   *{box-sizing:inherit}
   h1{margin:0 0 10px 0;font-size:16px}
   .wrap{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-  /* Board */
-  .board{background:linear-gradient(180deg,#111827,#0b1220);padding:10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6);min-width:300px;max-width:340px}
+  .board{background:linear-gradient(180deg,#111827,#0b1220);padding:10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.6);min-width:300px;max-width:360px}
   .controls-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
   button{background:#2563eb;color:white;border:none;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px}
   button.secondary{background:#1f2937;color:var(--accent);border:1px solid rgba(255,255,255,0.03);padding:6px 8px}
-  /* Larger grid cells */
-  .grid{display:grid;grid-template-columns:repeat(7,44px);grid-auto-rows:44px;gap:6px;margin-bottom:8px;justify-content:center}
-  .cell{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;font-size:13px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(7,46px);grid-auto-rows:46px;gap:6px;margin-bottom:8px;justify-content:center}
+  .cell{width:46px;height:46px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;font-size:13px;font-weight:700}
   .cell.locked{background:#233045;border:1px solid #0f1724;color:#6b7280}
   .cell.unlocked{background:#dbeafe;color:#022c3a;box-shadow:inset 0 -3px 6px rgba(0,0,0,0.06)}
   .cell.placed{color:#022c3a}
   .placed-red{background:linear-gradient(135deg,#fca5a5,#fecaca)}
   .placed-green{background:linear-gradient(135deg,#86efac,#bbf7d0)}
   .placed-blue{background:linear-gradient(135deg,#93c5fd,#bfdbfe)}
-
-  /* Visual highlight for potential extra placement */
+  .outline-rare { box-shadow: inset 0 0 0 3px var(--rare); }
+  .outline-epic { box-shadow: inset 0 0 0 3px var(--epic); }
+  .outline-super { box-shadow: inset 0 0 0 3px var(--super); }
   .extra-highlight { outline: 3px solid var(--highlight); outline-offset: -3px; }
-
-  /* Compact palette layout, but each category in its own card */
-  .palette-wrap{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:360px;max-width:760px}
-  .category-card{background:linear-gradient(180deg,var(--card),#061018);border-radius:8px;padding:8px;border:1px solid var(--card-border);flex:1;display:flex;flex-direction:column;min-width:110px;max-height:520px;overflow:hidden}
+  .palette-wrap{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:360px;max-width:920px}
+  .category-card{background:linear-gradient(180deg,var(--card),#061018);border-radius:8px;padding:8px;border:1px solid var(--card-border);flex:1;display:flex;flex-direction:column;min-width:130px;max-height:640px;overflow:hidden}
   .category-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-weight:700;color:var(--accent);font-size:13px}
   .category-body{overflow:auto;padding-right:6px;flex:1}
   .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
   .dot.red{background:linear-gradient(180deg,#f87171,#fecaca);box-shadow:inset 0 -2px rgba(0,0,0,0.08)}
   .dot.green{background:linear-gradient(180deg,#4ade80,#bbf7d0);box-shadow:inset 0 -2px rgba(0,0,0,0.08)}
   .dot.blue{background:linear-gradient(180deg,#60a5fa,#bfdbfe);box-shadow:inset 0 -2px rgba(0,0,0,0.08)}
-
-  /* shape row compact: mini, id, count (no names) */
   .shape-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:4px 2px;border-radius:6px}
   .shape-row:hover{background:rgba(255,255,255,0.02)}
   .mini{display:grid;grid-template-columns:repeat(3,12px);grid-auto-rows:12px;gap:2px}
@@ -55,26 +53,29 @@
   .shape-id{width:36px;font-size:12px;color:var(--muted);text-align:left}
   .count{display:flex;align-items:center;gap:6px;margin-left:auto}
   .count input{width:40px;font-size:12px;padding:4px;border-radius:6px;border:1px solid #213244;background:#071021;color:var(--accent);text-align:center;height:28px}
-
-  /* Selected list under the grid, compact */
   .selected-area{margin-top:8px;padding:8px;border-radius:8px;background:linear-gradient(180deg,#07101a,#071421);border:1px solid rgba(255,255,255,0.03)}
   .selected-title{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--accent);font-weight:700}
   .selected-list{display:flex;gap:6px;flex-wrap:wrap}
   .selected-item{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);cursor:pointer;user-select:none;font-size:13px}
+  .selected-item.rare { background: var(--rare); color: #021029; }
+  .selected-item.epic { background: var(--epic); color: #fff; }
+  .selected-item.super { background: var(--super); color: #fff; }
   .selected-mini{width:36px;height:36px;display:grid;grid-template-columns:repeat(3,10px);grid-auto-rows:10px;gap:2px}
   .selected-mini .mcell{width:10px;height:10px;background:rgba(255,255,255,0.04);border-radius:2px}
   .selected-mini .mcell.on{background:linear-gradient(180deg,#bae6fd,#60a5fa)}
-  .selected-count{font-weight:700;color:var(--accent);padding-left:6px;margin-left:6px;border-left:1px solid rgba(255,255,255,0.03)}
-
-  /* indicator for extra slots */
+  .selected-count{font-weight:700;padding-left:6px;margin-left:6px;border-left:1px solid rgba(255,255,255,0.03)}
+  .included-area{margin-top:8px;padding:8px;border-radius:8px;background:linear-gradient(180deg,#06111a,#061216);border:1px solid rgba(255,255,255,0.02)}
+  .included-title{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--accent);font-weight:700}
+  .included-list{display:flex;gap:6px;flex-wrap:wrap}
+  .included-item{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px}
   .extra-indicator { margin-top:8px; padding:8px; border-radius:6px; background: linear-gradient(180deg,#071421,#061219); border:1px solid rgba(255,255,255,0.03); color:#cfe8ff; font-size:13px; }
   .extra-list { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   .extra-item { display:flex; gap:6px; align-items:center; padding:6px; border-radius:6px; background: rgba(255,255,255,0.02); }
   .extra-item button { padding:4px 6px; font-size:12px; border-radius:6px; }
-
-  /* placements list */
+  .scoreboard { margin-top:10px; width:100%; border-collapse:collapse; font-size:13px; color:var(--accent);}
+  .scoreboard th, .scoreboard td { border:1px solid rgba(255,255,255,0.04); padding:6px 8px; text-align:center; }
+  .scoreboard .colheader { font-weight:700; }
   .placements{margin-top:8px;font-size:13px;color:var(--accent);max-height:180px;overflow:auto}
-
   @media (max-width:980px){
     .wrap{flex-direction:column;padding:6px}
     .board{max-width:100%}
@@ -85,32 +86,60 @@
 </style>
 </head>
 <body>
-<h1>CR:TOA Altar of Forgotten Memories Solver</h1>
+<h1>CR:TOA Maximum Rift Resistance Optimizer</h1>
+
 <div class="wrap">
   <div class="board">
     <div class="controls-top">
       <div style="color:#9fb6d4;font-size:12px">Click tiles to toggle locked/unlocked</div>
       <div style="display:flex;gap:8px">
-        <button id="solveBtn">Solve</button>
+        <button id="solveBtn">Solve (maximize Total)</button>
         <button id="resetGrid" class="secondary">Reset</button>
-        <button id="clearSolution" class="secondary">Clear</button>
+        <button id="clearAll" class="secondary">Clear</button>
       </div>
     </div>
 
-    <div id="grid" class="grid"></div>
+    <div id="grid" class="grid" title="Click to toggle locked/unlocked"></div>
 
-    <div class="selected-area" id="selectedArea">
+    <div class="selected-area">
       <div class="selected-title">
-        <span class="dot red"></span>
-        <div>Selected shapes <span style="color:#9fb6d4;font-weight:400;margin-left:8px;font-size:12px">(click to remove one instance)</span></div>
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--rare);display:inline-block;"></span>
+        <div>Shards selected <span style="color:#9fb6d4;font-weight:400;margin-left:8px;font-size:12px">(left-click to cycle rarity, right-click to delete)</span></div>
       </div>
+
       <div id="selectedList" class="selected-list"></div>
 
-      <!-- Extra indicator (visible only when solution present & spare unlocked tiles) -->
+      <!-- NEW: Shapes included in the current solution -->
+      <div class="included-area" id="includedArea">
+        <div class="included-title">
+          <span style="width:10px;height:10px;border-radius:50%;background:#9fb6d4;display:inline-block;"></span>
+          <div>Shards included in the current solution</div>
+        </div>
+        <div id="includedList" class="included-list"></div>
+      </div>
+
       <div id="extraIndicator" class="extra-indicator" style="display:none;">
         <div id="extraHeader"></div>
         <div id="extraList" class="extra-list"></div>
       </div>
+
+      <table class="scoreboard" id="scoreboard" aria-label="Rift Resistance scoreboard">
+        <thead>
+          <tr>
+            <th class="colheader">Metric</th>
+            <th class="colheader" style="background:var(--rare);color:#021029">Rare</th>
+            <th class="colheader" style="background:var(--epic);">Epic</th>
+            <th class="colheader" style="background:var(--super);">Super Epic</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Tiles</td><td id="sb_tiles_rare">0</td><td id="sb_tiles_epic">0</td><td id="sb_tiles_super">0</td></tr>
+          <tr><td>Rift Resistance</td><td id="sb_rr_rare">0</td><td id="sb_rr_epic">0</td><td id="sb_rr_super">0</td></tr>
+          <tr><td>Set Bonus</td><td id="sb_set_rare">0</td><td id="sb_set_epic">0</td><td id="sb_set_super">0</td></tr>
+          <!-- "Total" row removed per request -->
+        </tbody>
+      </table>
+
     </div>
 
     <div class="placements" id="placements"></div>
@@ -135,508 +164,604 @@
 </div>
 
 <script>
-/* Compact preview JS updated:
-   - Clear button clears the solution AND deletes all selected shapes (selected-list counts reset).
-   - When Solve (or an auto re-solve) fails, an "Invalid selection" message appears and the visualization clears.
-   - Other behaviors preserved: conditional deletion, extra-slot indicator, hover highlight, etc.
-*/
+/* Wrap initialization in DOMContentLoaded and add error logging to avoid silent failures */
+window.addEventListener('error', (ev) => {
+  console.error('Runtime error:', ev.error || ev.message, ev);
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  console.error('Unhandled promise rejection:', ev.reason);
+});
 
-const ROWS = 7, COLS = 7;
-let unlocked = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>false));
-let placedCells = {};         // map "r,c" -> { pid, colorClass }
-let shapeTypes = [];          // list of {id, cells, baseName, size}
-let shapeCounts = {};         // id -> count
-const MAX_PIECES = 15;
-let hasSolution = false;      // whether a solution is currently visualized
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    /* --- Config / state --- */
+    const ROWS = 7, COLS = 7;
+    // Unlimited selections allowed
+    const MAX_PIECES = Infinity;
+    const RARITY_ORDER = ['rare','epic','super'];
+    const RARITY_VALUES = { rare: 30, epic: 60, super: 120 };
+    let unlocked = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>false));
+    let shapeTypes = []; // oriented types (S#)
+    let selectedInstances = []; // list of { iid, shapeId, rarity, size, baseName }
+    let placedCells = {}; // map "r,c" -> { pid, iid, rarity, colorClass }
+    let hasSolution = false;
 
-/* default center 3x5 unlocked */
-function applyDefaultCenter(){
-  unlocked = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>false));
-  const startR = Math.floor((ROWS-3)/2);
-  const startC = Math.floor((COLS-5)/2);
-  for(let r=startR; r<startR+3; r++){
-    for(let c=startC; c<startC+5; c++){
-      unlocked[r][c] = true;
+    /* --- Geometry helpers --- */
+    function normalize(cells){
+      if(!cells.length) return [];
+      const minr = Math.min(...cells.map(p=>p[0]));
+      const minc = Math.min(...cells.map(p=>p[1]));
+      const out = cells.map(p=>[p[0]-minr, p[1]-minc]);
+      out.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+      return out;
     }
-  }
-}
-
-/* geometry helpers */
-function normalize(cells){
-  if(cells.length===0) return [];
-  const minr = Math.min(...cells.map(p=>p[0]));
-  const minc = Math.min(...cells.map(p=>p[1]));
-  const out = cells.map(p=>[p[0]-minr, p[1]-minc]);
-  out.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
-  return out;
-}
-function rotate90(cells){ return normalize(cells.map(([r,c])=>[c,-r])); }
-function reflectX(cells){ return normalize(cells.map(([r,c])=>[-r,c])); }
-function all8_unique(cells){
-  const t0 = normalize(cells);
-  const raw = [];
-  let cur = t0;
-  for(let i=0;i<4;i++){ raw.push(cur); cur = rotate90(cur); }
-  cur = reflectX(t0);
-  for(let i=0;i<4;i++){ raw.push(cur); cur = rotate90(cur); }
-  const seen = new Set();
-  const unique = [];
-  for(const t of raw){
-    const key = t.map(p=>p[0]+','+p[1]).join(';');
-    if(!seen.has(key)){ seen.add(key); unique.push(t); }
-  }
-  return unique;
-}
-
-/* base shapes (transcribed + pruned per earlier requests) */
-const baseShapes = [
-  {name:"monomino", cells:[[0,0]]},
-  {name:"domino", cells:[[0,0],[0,1]]},
-  {name:"tromino-I", cells:[[0,0],[0,1],[0,2]]},
-  {name:"tromino-L", cells:[[0,0],[0,1],[1,0]]},
-  {name:"tetromino-I", cells:[[0,0],[0,1],[0,2],[0,3]]},
-  {name:"tetromino-O", cells:[[0,0],[0,1],[1,0],[1,1]]},
-  {name:"tetromino-T", cells:[[0,1],[1,0],[1,1],[1,2]]},
-  {name:"tetromino-L", cells:[[0,0],[1,0],[2,0],[2,1]]},
-  {name:"pentomino-T", cells:[[0,0],[0,1],[0,2],[1,1],[2,1]]},
-  {name:"pentomino-U", cells:[[0,0],[0,2],[1,0],[1,1],[1,2]]},
-  {name:"pentomino-V", cells:[[0,0],[1,0],[2,0],[2,1],[2,2]]},
-  {name:"pentomino-X", cells:[[0,1],[1,0],[1,1],[1,2],[2,1]]},
-  {name:"pentomino-Z", cells:[[0,0],[0,1],[1,1],[2,1],[2,2]]},
-];
-
-function buildShapeTypes(){
-  shapeTypes = [];
-  let sid = 1;
-  for(const b of baseShapes){
-    const transforms = all8_unique(b.cells);
-    for(const t of transforms){
-      shapeTypes.push({ id: "S"+sid, cells: t, baseName: b.name, size: t.length });
-      sid++;
+    function rotate90(cells){ return normalize(cells.map(([r,c])=>[c,-r])); }
+    function reflectX(cells){ return normalize(cells.map(([r,c])=>[-r,c])); }
+    function all8_unique(cells){
+      const t0 = normalize(cells);
+      const raw = [];
+      let cur = t0;
+      for(let i=0;i<4;i++){ raw.push(cur); cur = rotate90(cur); }
+      cur = reflectX(t0);
+      for(let i=0;i<4;i++){ raw.push(cur); cur = rotate90(cur); }
+      const seen = new Set(); const unique=[];
+      for(const t of raw){
+        const key = t.map(p=>p[0]+','+p[1]).join(';');
+        if(!seen.has(key)){ seen.add(key); unique.push(t); }
+      }
+      return unique;
     }
-  }
-}
 
-/* UI elements */
-const gridEl = document.getElementById('grid');
-const colA = document.getElementById('colA');
-const colB = document.getElementById('colB');
-const colC = document.getElementById('colC');
-const selectedListEl = document.getElementById('selectedList');
-const placementsEl = document.getElementById('placements');
-const extraIndicatorEl = document.getElementById('extraIndicator');
-const extraHeaderEl = document.getElementById('extraHeader');
-const extraListEl = document.getElementById('extraList');
+    /* --- Base shapes --- */
+    const baseShapes = [
+      {name:"monomino", cells:[[0,0]]},
+      {name:"domino", cells:[[0,0],[0,1]]},
+      {name:"tromino-I", cells:[[0,0],[0,1],[0,2]]},
+      {name:"tromino-L", cells:[[0,0],[0,1],[1,0]]},
+      {name:"tetromino-I", cells:[[0,0],[0,1],[0,2],[0,3]]},
+      {name:"tetromino-O", cells:[[0,0],[0,1],[1,0],[1,1]]},
+      {name:"tetromino-T", cells:[[0,1],[1,0],[1,1],[1,2]]},
+      {name:"tetromino-L", cells:[[0,0],[1,0],[2,0],[2,1]]},
+      {name:"pentomino-T", cells:[[0,0],[0,1],[0,2],[1,1],[2,1]]},
+      {name:"pentomino-U", cells:[[0,0],[0,2],[1,0],[1,1],[1,2]]},
+      {name:"pentomino-V", cells:[[0,0],[1,0],[2,0],[2,1],[2,2]]},
+      {name:"pentomino-X", cells:[[0,1],[1,0],[1,1],[1,2],[2,1]]},
+      {name:"pentomino-Z", cells:[[0,0],[0,1],[1,1],[2,1],[2,2]]},
+    ];
 
-/* Helpers to show invalid selection message and clear visualization */
-function showInvalidSelection(errorText){
-  clearSolution(); // clears visualization and hasSolution flag
-  placementsEl.innerHTML = `<div style="color:#fecaca;font-weight:700">Invalid selection — no tiling exists for the current selection.</div>
-    <div style="color:#9fb6d4;margin-top:6px">${errorText || 'Please adjust your selected shapes and try again.'}</div>`;
-}
+    function buildShapeTypes(){
+      shapeTypes = [];
+      let sid = 1;
+      for(const b of baseShapes){
+        const transforms = all8_unique(b.cells);
+        for(const t of transforms){
+          shapeTypes.push({ id: 'S'+sid, cells: t, baseName: b.name, size: t.length });
+          sid++;
+        }
+      }
+    }
 
-/* Grid rendering */
-function renderGrid(){
-  gridEl.innerHTML = '';
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const div = document.createElement('div');
-      const k = r+','+c;
-      const placed = placedCells[k];
-      let cls = 'cell ';
-      if(placed) cls += 'placed ' + placed.colorClass;
-      else cls += (unlocked[r][c] ? 'unlocked' : 'locked');
-      div.className = cls;
-      div.dataset.rc = k;
-      div.title = placed ? `Placed ${placed.pid}` : (unlocked[r][c] ? 'Unlocked' : 'Locked');
-      div.textContent = placed ? placed.pid : '';
-      div.addEventListener('click', ()=>{
-        // preserve behavior: clicking board clears solution only when one is present
-        if(hasSolution) clearSolution();
-        unlocked[r][c] = !unlocked[r][c];
-        renderGrid();
-        updateExtraIndicator();
+    /* --- DOM refs --- */
+    const gridEl = document.getElementById('grid');
+    const colA = document.getElementById('colA');
+    const colB = document.getElementById('colB');
+    const colC = document.getElementById('colC');
+    const selectedListEl = document.getElementById('selectedList');
+    const includedListEl = document.getElementById('includedList');
+    const placementsEl = document.getElementById('placements');
+    const extraIndicatorEl = document.getElementById('extraIndicator');
+    const extraHeaderEl = document.getElementById('extraHeader');
+    const extraListEl = document.getElementById('extraList');
+
+    /* --- Default unlocked grid --- */
+    function applyDefaultCenter(){
+      unlocked = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>false));
+      const startR = Math.floor((ROWS-3)/2);
+      const startC = Math.floor((COLS-5)/2);
+      for(let r=startR; r<startR+3; r++){
+        for(let c=startC; c<startC+5; c++){
+          unlocked[r][c] = true;
+        }
+      }
+    }
+
+    /* --- Render grid --- */
+    function renderGrid(){
+      gridEl.innerHTML = '';
+      for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+          const div = document.createElement('div');
+          const k = r+','+c;
+          const placed = placedCells[k];
+          let cls = 'cell ';
+          if(placed) cls += 'placed';
+          else cls += (unlocked[r][c] ? 'unlocked' : 'locked');
+          div.className = cls;
+          if(placed){
+            div.classList.add(placed.colorClass);
+            if(placed.rarity === 'rare') div.classList.add('outline-rare');
+            else if(placed.rarity === 'epic') div.classList.add('outline-epic');
+            else if(placed.rarity === 'super') div.classList.add('outline-super');
+            div.textContent = placed.pid;
+          } else {
+            div.textContent = '';
+          }
+          div.dataset.rc = k;
+          div.title = placed ? `Placed ${placed.pid}` : (unlocked[r][c] ? 'Unlocked' : 'Locked');
+          div.addEventListener('click', ()=> {
+            if(hasSolution) clearSolution();
+            unlocked[r][c] = !unlocked[r][c];
+            renderGrid();
+            updateExtraIndicator();
+          });
+          gridEl.appendChild(div);
+        }
+      }
+    }
+
+    /* --- Palette --- */
+    function renderPalette(){
+      colA.innerHTML=''; colB.innerHTML=''; colC.innerHTML='';
+      const cats={ small:[], four:[], five:[], other:[] };
+      for(const s of shapeTypes){
+        if(s.size>=1 && s.size<=3) cats.small.push(s);
+        else if(s.size===4) cats.four.push(s);
+        else if(s.size===5) cats.five.push(s);
+        else cats.other.push(s);
+      }
+
+      function makeRow(s){
+        const row = document.createElement('div'); row.className='shape-row';
+        const mini = document.createElement('div'); mini.className='mini';
+        const maxR = Math.max(...s.cells.map(p=>p[0])); const maxC = Math.max(...s.cells.map(p=>p[1]));
+        const h = Math.max(1, Math.min(3, maxR+1)); const w = Math.max(1, Math.min(3, maxC+1));
+        mini.style.gridTemplateColumns = `repeat(${w},12px)`;
+        for(let rr=0; rr<h; rr++){
+          for(let cc=0; cc<w; cc++){
+            const mc = document.createElement('div'); mc.className='mcell';
+            if(s.cells.some(p=>p[0]===rr && p[1]===cc)) mc.classList.add('on');
+            mini.appendChild(mc);
+          }
+        }
+        const idEl = document.createElement('div'); idEl.className='shape-id'; idEl.textContent = s.id;
+        const countWrap = document.createElement('div'); countWrap.className='count';
+        const minus = document.createElement('button'); minus.textContent='-'; minus.style.padding='3px 6px';
+        const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.value = countInstancesOfShape(s.id);
+        const plus = document.createElement('button'); plus.textContent='+'; plus.style.padding='3px 6px';
+
+        minus.addEventListener('click', ()=>{
+          removeOneInstanceOfShape(s.id);
+          inp.value = countInstancesOfShape(s.id);
+          renderSelectedList();
+          updateExtraIndicator();
+        });
+        plus.addEventListener('click', ()=>{
+          addInstance(s.id, s.size, s.baseName);
+          inp.value = countInstancesOfShape(s.id);
+          renderSelectedList();
+          updateExtraIndicator();
+        });
+        inp.addEventListener('change', ()=>{
+          let v = parseInt(inp.value||0);
+          if(isNaN(v)||v<0) v=0;
+          setInstancesCountForShape(s.id, v, s.size, s.baseName);
+          inp.value = countInstancesOfShape(s.id);
+          renderSelectedList();
+          updateExtraIndicator();
+        });
+
+        countWrap.appendChild(minus); countWrap.appendChild(inp); countWrap.appendChild(plus);
+        row.appendChild(mini); row.appendChild(idEl); row.appendChild(countWrap);
+        return row;
+      }
+
+      if(cats.small.length) cats.small.forEach(s=>colA.appendChild(makeRow(s))); else colA.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
+      if(cats.four.length) cats.four.forEach(s=>colB.appendChild(makeRow(s))); else colB.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
+      if(cats.five.length || cats.other.length){
+        cats.five.forEach(s=>colC.appendChild(makeRow(s)));
+        cats.other.forEach(s=>colC.appendChild(makeRow(s)));
+      } else colC.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
+    }
+
+    /* --- Selected instances management --- */
+    let nextInstanceId = 1;
+    function addInstance(shapeId, size, baseName){
+      const iid = 'I' + (nextInstanceId++);
+      selectedInstances.push({ iid, shapeId, rarity:'rare', size, baseName });
+    }
+    function removeOneInstanceOfShape(shapeId){
+      for(let i=selectedInstances.length-1;i>=0;i--){
+        if(selectedInstances[i].shapeId === shapeId){
+          selectedInstances.splice(i,1);
+          return;
+        }
+      }
+    }
+    function setInstancesCountForShape(shapeId, targetCount, size, baseName){
+      const cur = selectedInstances.filter(s=>s.shapeId===shapeId).length;
+      if(targetCount > cur){
+        const toAdd = Math.max(0, targetCount - cur);
+        for(let i=0;i<toAdd;i++) addInstance(shapeId,size,baseName);
+      } else if(targetCount < cur){
+        let removed = 0;
+        for(let i=selectedInstances.length-1;i>=0 && removed < (cur - targetCount); i--){
+          if(selectedInstances[i].shapeId === shapeId){ selectedInstances.splice(i,1); removed++; }
+        }
+      }
+    }
+    function countInstancesOfShape(shapeId){ return selectedInstances.filter(s=>s.shapeId===shapeId).length; }
+    function totalSelectedInstances(){ return selectedInstances.length; }
+
+    /* --- Render selected list (per-instance) --- */
+    function renderSelectedList(){
+      selectedListEl.innerHTML = '';
+      if(selectedInstances.length === 0){ selectedListEl.innerHTML = '<div style="color:#9fb6d4">No shapes selected</div>'; return; }
+      for(const inst of selectedInstances){
+        const item = document.createElement('div');
+        item.className = 'selected-item ' + inst.rarity;
+        const mini = document.createElement('div'); mini.className='selected-mini';
+        const st = shapeTypes.find(s=>s.id===inst.shapeId);
+        const cells = st ? st.cells : [[0,0]];
+        for(let rr=0; rr<3; rr++){
+          for(let cc=0; cc<3; cc++){
+            const mc = document.createElement('div'); mc.className='mcell';
+            if(cells.some(q=>q[0]===rr && q[1]===cc)) mc.classList.add('on');
+            mini.appendChild(mc);
+          }
+        }
+        const idDiv = document.createElement('div'); idDiv.style.color = (inst.rarity==='rare' ? '#021029' : '#fff'); idDiv.style.fontWeight='700';
+        idDiv.textContent = inst.iid;
+        const cntEl = document.createElement('div'); cntEl.className='selected-count'; cntEl.textContent = inst.baseName ? inst.baseName : inst.shapeId;
+        item.addEventListener('click', (ev)=>{
+          ev.preventDefault();
+          cycleRarityForInstance(inst.iid);
+          renderSelectedList();
+          if(hasSolution){ runSolveOptimize(); }
+        });
+        item.addEventListener('contextmenu', (ev)=>{
+          ev.preventDefault();
+          const idx = selectedInstances.findIndex(x=>x.iid===inst.iid);
+          if(idx>=0) selectedInstances.splice(idx,1);
+          renderSelectedList();
+          if(hasSolution) runSolveOptimize();
+          renderPalette();
+          updateExtraIndicator();
+        });
+
+        item.appendChild(mini); item.appendChild(idDiv); item.appendChild(cntEl);
+        selectedListEl.appendChild(item);
+      }
+      updatePaletteInputs();
+    }
+
+    function cycleRarityForInstance(iid){
+      const inst = selectedInstances.find(x=>x.iid===iid);
+      if(!inst) return;
+      const cur = inst.rarity;
+      const idx = RARITY_ORDER.indexOf(cur);
+      inst.rarity = RARITY_ORDER[(idx+1) % RARITY_ORDER.length];
+    }
+
+    function updatePaletteInputs(){
+      const inputs = document.querySelectorAll('.category-body input[type="number"]');
+      for(const inp of inputs){
+        const row = inp.closest('.shape-row');
+        if(!row) continue;
+        const idEl = row.querySelector('.shape-id');
+        if(!idEl) continue;
+        const shapeId = idEl.textContent;
+        inp.value = countInstancesOfShape(shapeId);
+      }
+    }
+
+    /* --- Render included list (new) --- */
+    function renderIncludedList(placements){
+      includedListEl.innerHTML = '';
+      if(!placements || placements.length === 0){
+        includedListEl.innerHTML = '<div style="color:#9fb6d4">No shapes in current solution</div>';
+        return;
+      }
+      // placements: array of { iid, shapeId, rarity, placement }
+      placements.forEach((p, idx) => {
+        const item = document.createElement('div'); item.className = 'included-item';
+        const mini = document.createElement('div'); mini.className = 'selected-mini';
+        // show small preview using the shape type
+        const st = shapeTypes.find(s=>s.id===p.shapeId);
+        const cells = st ? st.cells : [[0,0]];
+        for(let rr=0; rr<3; rr++){
+          for(let cc=0; cc<3; cc++){
+            const mc = document.createElement('div'); mc.className='mcell';
+            if(cells.some(q=>q[0]===rr && q[1]===cc)) mc.classList.add('on');
+            mini.appendChild(mc);
+          }
+        }
+        const txt = document.createElement('div');
+        txt.style.color = '#cfe8ff';
+        txt.textContent = `${p.pid || ('P'+(idx+1))} • ${p.iid} • ${p.shapeId} • ${p.rarity}`;
+        item.appendChild(mini); item.appendChild(txt);
+        includedListEl.appendChild(item);
       });
-      gridEl.appendChild(div);
     }
-  }
-}
 
-/* Palette rendering into three separate cards */
-function renderPalette(){
-  colA.innerHTML = ''; colB.innerHTML = ''; colC.innerHTML = '';
-  const cats = { small:[], four:[], five:[], other:[] };
-  for(const s of shapeTypes){
-    if(s.size>=1 && s.size<=3) cats.small.push(s);
-    else if(s.size===4) cats.four.push(s);
-    else if(s.size===5) cats.five.push(s);
-    else cats.other.push(s);
-  }
+    function clearIncludedList(){ includedListEl.innerHTML = '<div style="color:#9fb6d4">No shapes in current solution</div>'; }
 
-  function makeRow(s){
-    const row = document.createElement('div'); row.className='shape-row';
-    const mini = document.createElement('div'); mini.className='mini';
-    const maxR = Math.max(...s.cells.map(p=>p[0])); const maxC = Math.max(...s.cells.map(p=>p[1]));
-    const h = Math.max(1, Math.min(3, maxR+1)); const w = Math.max(1, Math.min(3, maxC+1));
-    mini.style.gridTemplateColumns = `repeat(${w},12px)`;
-    for(let rr=0; rr<h; rr++){
-      for(let cc=0; cc<w; cc++){
-        const mc = document.createElement('div'); mc.className='mcell';
-        if(s.cells.some(p=>p[0]===rr && p[1]===cc)) mc.classList.add('on');
-        mini.appendChild(mc);
-      }
-    }
-    const idEl = document.createElement('div'); idEl.className='shape-id'; idEl.textContent = s.id;
-    const countWrap = document.createElement('div'); countWrap.className='count';
-    const minus = document.createElement('button'); minus.textContent='-'; minus.style.padding='3px 6px';
-    const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.value = shapeCounts[s.id]||0;
-    const plus = document.createElement('button'); plus.textContent='+'; plus.style.padding='3px 6px';
-
-    minus.addEventListener('click', ()=>{
-      const cur = Math.max(0, parseInt(inp.value||0)-1);
-      inp.value = cur; shapeCounts[s.id]=cur; renderSelectedList(); updateExtraIndicator();
-    });
-    plus.addEventListener('click', ()=>{
-      const total = totalSelectedPieces();
-      if(total >= MAX_PIECES){ alert('Maximum total pieces reached ('+MAX_PIECES+')'); return; }
-      const cur = Math.min(MAX_PIECES, parseInt(inp.value||0)+1);
-      inp.value = cur; shapeCounts[s.id]=cur; renderSelectedList(); updateExtraIndicator();
-    });
-    inp.addEventListener('change', ()=>{
-      let v = parseInt(inp.value||0); if(isNaN(v)||v<0) v=0; if(v>MAX_PIECES) v=MAX_PIECES;
-      const existingTotalExcludingThis = totalSelectedPieces() - (shapeCounts[s.id] || 0);
-      if(existingTotalExcludingThis + v > MAX_PIECES) v = Math.max(0, MAX_PIECES - existingTotalExcludingThis);
-      inp.value=v; shapeCounts[s.id]=v; renderSelectedList(); updateExtraIndicator();
-    });
-
-    countWrap.appendChild(minus); countWrap.appendChild(inp); countWrap.appendChild(plus);
-    row.appendChild(mini); row.appendChild(idEl); row.appendChild(countWrap);
-    return row;
-  }
-
-  if(cats.small.length) cats.small.forEach(s=>colA.appendChild(makeRow(s))); else colA.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
-  if(cats.four.length) cats.four.forEach(s=>colB.appendChild(makeRow(s))); else colB.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
-  if(cats.five.length || cats.other.length){
-    cats.five.forEach(s=>colC.appendChild(makeRow(s)));
-    cats.other.forEach(s=>colC.appendChild(makeRow(s)));
-  } else colC.innerHTML='<div style="color:#9fb6d4">No shapes</div>';
-}
-
-/* placements generation & solver (backtracking) */
-function generatePlacementsFor(shape){
-  const cells = shape.cells;
-  const maxR = Math.max(...cells.map(p=>p[0]));
-  const maxC = Math.max(...cells.map(p=>p[1]));
-  const placements = [];
-  for(let ar=0; ar+maxR<ROWS; ar++){
-    for(let ac=0; ac+maxC<COLS; ac++){
-      const abs = cells.map(([r,c])=>[r+ar, c+ac]);
-      let ok = true;
-      for(const [r,c] of abs){
-        if(r<0||r>=ROWS||c<0||c>=COLS){ ok=false; break; }
-        if(!unlocked[r][c]){ ok=false; break; }
-      }
-      if(ok) placements.push({shapeId: shape.id, anchor:[ar,ac], cells:abs});
-    }
-  }
-  return placements;
-}
-
-function buildPlacementsMap(){
-  const placementsByShape = {};
-  for(const s of shapeTypes){
-    const cnt = shapeCounts[s.id] || 0;
-    if(cnt<=0) continue;
-    placementsByShape[s.id] = generatePlacementsFor(s);
-  }
-  return placementsByShape;
-}
-
-function solveOnce(maxPieces=15){
-  const instances = [];
-  const placementsByShape = buildPlacementsMap();
-  for(const s of shapeTypes){
-    const cnt = shapeCounts[s.id] || 0;
-    for(let i=0;i<cnt;i++) instances.push({instanceId: s.id+'#'+i, shapeId: s.id});
-  }
-  if(instances.length===0) return {ok:true, placements:[]};
-  if(instances.length > maxPieces) return {ok:false, error:'Total piece count exceeds max allowed.'};
-  const instanceOptions = instances.map(inst => ({inst, opts: placementsByShape[inst.shapeId] || []}));
-  for(const io of instanceOptions) if(io.opts.length===0) return {ok:false, error:'One or more requested piece types have no valid placements on current board.'};
-  instanceOptions.sort((a,b)=>a.opts.length - b.opts.length);
-
-  const used = new Set(); const chosen = []; let found=null;
-  function backtrack(idx){
-    if(found) return;
-    if(idx >= instanceOptions.length){ found = chosen.slice(); return; }
-    const {inst, opts} = instanceOptions[idx];
-    for(const p of opts){
-      let conflict=false;
-      for(const [r,c] of p.cells) if(used.has(r+','+c)){ conflict=true; break; }
-      if(conflict) continue;
-      for(const [r,c] of p.cells) used.add(r+','+c);
-      chosen.push({instId:inst.instanceId, shapeId:p.shapeId, anchor:p.anchor, cells:p.cells});
-      backtrack(idx+1);
-      if(found) return;
-      chosen.pop();
-      for(const [r,c] of p.cells) used.delete(r+','+c);
-    }
-  }
-  backtrack(0);
-  if(found) return {ok:true, placements:found};
-  return {ok:false, error:'No placement set found that fits all requested pieces.'};
-}
-
-/* visualization helpers */
-function sizeToCategory(size){
-  if(size>=1 && size<=3) return {cssClass:'placed-red', color:'red'};
-  if(size===4) return {cssClass:'placed-green', color:'green'};
-  if(size===5) return {cssClass:'placed-blue', color:'blue'};
-  return {cssClass:'placed-blue', color:'blue'};
-}
-
-function visualizeSolution(sol){
-  placedCells = {};
-  for(let i=0;i<sol.length;i++){
-    const pl = sol[i]; const pid = 'P'+(i+1);
-    const shape = shapeTypes.find(s=>s.id===pl.shapeId);
-    const cat = sizeToCategory(shape ? shape.size : pl.cells.length);
-    for(const [r,c] of pl.cells) placedCells[r+','+c] = { pid, colorClass: cat.cssClass };
-  }
-  // mark that a solution is present
-  hasSolution = true;
-  renderGrid();
-  placementsEl.innerHTML = '';
-  sol.forEach((pl,i)=>{
-    const shape = shapeTypes.find(s=>s.id===pl.shapeId);
-    const cat = sizeToCategory(shape ? shape.size : pl.cells.length);
-    const div = document.createElement('div'); div.className='placement-row';
-    const dot = document.createElement('span'); dot.className='dot '+cat.color; dot.style.width='12px'; dot.style.height='12px'; dot.style.display='inline-block'; dot.style.marginRight='8px';
-    const txt = document.createElement('div'); txt.textContent = `${'P'+(i+1)}: ${pl.instId} anchor=${pl.anchor}`; txt.style.display='inline-block';
-    div.appendChild(dot); div.appendChild(txt); placementsEl.appendChild(div);
-  });
-
-  // update indicator for spare unlocked tiles
-  updateExtraIndicator();
-}
-
-function clearSolution(){ placedCells = {}; placementsEl.innerHTML=''; hasSolution = false; renderGrid(); updateExtraIndicator(); }
-
-/* Clear ALL selections + visualization (used for Clear button) */
-function clearAllSelections(){
-  // reset counts
-  for(const id in shapeCounts) shapeCounts[id] = 0;
-  // re-render palette (so inputs show 0)
-  renderPalette();
-  // clear selected list view
-  renderSelectedList();
-  // clear visualization
-  clearSolution();
-  // clear placements message area
-  placementsEl.innerHTML = '';
-}
-
-/* selected list */
-function totalSelectedPieces(){ let sum=0; for(const k in shapeCounts) sum += (shapeCounts[k]||0); return sum; }
-
-function renderSelectedList(){
-  selectedListEl.innerHTML = '';
-  const pairs = [];
-  for(const s of shapeTypes){
-    const cnt = shapeCounts[s.id] || 0;
-    if(cnt > 0) pairs.push({shape:s, count:cnt});
-  }
-  if(pairs.length === 0){ selectedListEl.innerHTML = '<div style="color:#9fb6d4">No shapes selected</div>'; return; }
-  pairs.forEach(p=>{
-    const item = document.createElement('div'); item.className='selected-item';
-    const mini = document.createElement('div'); mini.className='selected-mini';
-    for(let rr=0; rr<3; rr++){
-      for(let cc=0; cc<3; cc++){
-        const mc = document.createElement('div'); mc.className='mcell';
-        if(p.shape.cells.some(q=>q[0]===rr && q[1]===cc)) mc.classList.add('on');
-        mini.appendChild(mc);
-      }
-    }
-    const idDiv = document.createElement('div'); idDiv.style.color='#cfe8ff'; idDiv.style.fontSize='13px'; idDiv.textContent = p.shape.id;
-    const cntEl = document.createElement('div'); cntEl.className='selected-count'; cntEl.textContent = '×' + p.count;
-    item.appendChild(mini); item.appendChild(idDiv); item.appendChild(cntEl);
-
-    // New behavior: deletion only re-runs solver if a solution is currently shown (hasSolution)
-    item.addEventListener('click', ()=>{
-      const prev = shapeCounts[p.shape.id] || 0; if(prev <= 0) return;
-      shapeCounts[p.shape.id] = Math.max(0, prev - 1);
-
-      // update palette input if present
-      const inputs = document.querySelectorAll('.category-body input[type="number"]');
-      for(const inp of inputs){
-        const row = inp.closest('.shape-row'); if(!row) continue;
-        const idEl = row.querySelector('.shape-id'); if(!idEl) continue;
-        if(idEl.textContent === p.shape.id){ inp.value = shapeCounts[p.shape.id]; break; }
-      }
-
-      // Always update the selected-list view
-      renderSelectedList();
-
-      if(hasSolution){
-        // a solution was present: remove this shape and re-run solver to update the visualization
-        const res = solveOnce(MAX_PIECES);
-        if(res.ok){
-          if(res.placements.length === 0){
-            clearSolution();
-            placementsEl.innerHTML = 'No pieces selected (trivial).';
-          } else {
-            visualizeSolution(res.placements);
+    /* --- Placements generation --- */
+    function generatePlacementsForShapeType(shape){
+      const cells = shape.cells;
+      const maxR = Math.max(...cells.map(p=>p[0]));
+      const maxC = Math.max(...cells.map(p=>p[1]));
+      const placements = [];
+      for(let ar=0; ar+maxR<ROWS; ar++){
+        for(let ac=0; ac+maxC<COLS; ac++){
+          const abs = cells.map(([r,c])=>[r+ar, c+ac]);
+          let ok = true;
+          for(const [r,c] of abs){
+            if(r<0||r>=ROWS||c<0||c>=COLS){ ok=false; break; }
+            if(!unlocked[r][c]) { ok=false; break; }
           }
-        } else {
-          showInvalidSelection(res.error);
-        }
-      } else {
-        // No solution currently present: per request, do NOT run solver; only delete the shape
-      }
-    });
-
-    selectedListEl.appendChild(item);
-  });
-}
-
-/* --- Extra indicator logic (unchanged) --- */
-function getUncoveredUnlockedSet(){
-  const set = new Set();
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const k = r+','+c;
-      if(unlocked[r][c] && !placedCells[k]) set.add(k);
-    }
-  }
-  return set;
-}
-
-function findExtraPlacementsExample(){
-  const uncovered = getUncoveredUnlockedSet();
-  if(uncovered.size === 0) return [];
-  const examples = [];
-  for(const s of shapeTypes){
-    if(s.size <= 1) continue;
-    const placements = generatePlacementsFor(s);
-    for(const p of placements){
-      const ok = p.cells.every(([r,c]) => uncovered.has(r+','+c));
-      if(ok){
-        examples.push({ shape: s, placement: p });
-        break;
-      }
-    }
-  }
-  return examples;
-}
-
-function clearHighlights(){
-  document.querySelectorAll('.cell.extra-highlight').forEach(el=>{
-    el.classList.remove('extra-highlight');
-  });
-}
-
-function highlightPlacement(placement){
-  clearHighlights();
-  for(const [r,c] of placement.cells){
-    const selector = `.cell[data-rc="${r},${c}"]`;
-    const el = document.querySelector(selector);
-    if(el) el.classList.add('extra-highlight');
-  }
-}
-
-function updateExtraIndicator(){
-  if(!hasSolution){ extraIndicatorEl.style.display = 'none'; clearHighlights(); return; }
-  const examples = findExtraPlacementsExample();
-  if(examples.length === 0){ extraIndicatorEl.style.display = 'none'; clearHighlights(); return; }
-  extraIndicatorEl.style.display = 'block';
-  extraHeaderEl.textContent = `Additional placements possible: ${examples.length} oriented shape${examples.length>1?'s':''} (excluding 1-tile)`;
-  extraListEl.innerHTML = '';
-  for(const ex of examples){
-    const item = document.createElement('div'); item.className='extra-item';
-    const mini = document.createElement('div'); mini.className='mini';
-    const s = ex.shape;
-    const maxR = Math.max(...s.cells.map(p=>p[0])); const maxC = Math.max(...s.cells.map(p=>p[1]));
-    const h = Math.max(1, Math.min(3, maxR+1)); const w = Math.max(1, Math.min(3, maxC+1));
-    mini.style.gridTemplateColumns = `repeat(${w},12px)`;
-    for(let rr=0; rr<h; rr++){
-      for(let cc=0; cc<w; cc++){
-        const mc = document.createElement('div'); mc.className='mcell';
-        if(s.cells.some(p=>p[0]===rr && p[1]===cc)) mc.classList.add('on');
-        mini.appendChild(mc);
-      }
-    }
-    const idSpan = document.createElement('div'); idSpan.style.color='#cfe8ff'; idSpan.style.fontSize='13px'; idSpan.textContent = s.id;
-    const plusBtn = document.createElement('button'); plusBtn.textContent = '+';
-    plusBtn.addEventListener('click', ()=>{
-      const total = totalSelectedPieces();
-      if(total >= MAX_PIECES){ alert('Maximum total pieces reached ('+MAX_PIECES+')'); return; }
-      shapeCounts[s.id] = (shapeCounts[s.id] || 0) + 1;
-      // update input in palette if visible
-      const inputs = document.querySelectorAll('.category-body input[type="number"]');
-      for(const inp of inputs){
-        const row = inp.closest('.shape-row'); if(!row) continue;
-        const idEl = row.querySelector('.shape-id'); if(!idEl) continue;
-        if(idEl.textContent === s.id){ inp.value = shapeCounts[s.id]; break; }
-      }
-      renderSelectedList();
-      // if solution currently present, re-run solver to update visualization
-      if(hasSolution){
-        const res = solveOnce(MAX_PIECES);
-        if(res.ok){
-          if(res.placements.length === 0){
-            clearSolution();
-            placementsEl.innerHTML = 'No pieces selected (trivial).';
-          } else {
-            visualizeSolution(res.placements);
-          }
-        } else {
-          showInvalidSelection(res.error);
+          if(ok) placements.push({ shapeId: shape.id, anchor:[ar,ac], cells: abs });
         }
       }
+      return placements;
+    }
+
+    /* --- Optimization solver --- */
+    function computeSetBonus(sumTiles){
+      if(sumTiles < 9) return 0;
+      const increments = Math.floor((sumTiles - 9) / 3);
+      const capped = Math.min(increments, 4);
+      return 265 * (capped + 1);
+    }
+
+    function scoreFromTiles(tilesByRarity){
+      const rrRare = tilesByRarity.rare * RARITY_VALUES.rare;
+      const rrEpic = tilesByRarity.epic * RARITY_VALUES.epic;
+      const rrSuper = tilesByRarity.super * RARITY_VALUES.super;
+      const rrSum = rrRare + rrEpic + rrSuper;
+      const sumTiles = tilesByRarity.rare + tilesByRarity.epic + tilesByRarity.super;
+      const setBonus = computeSetBonus(sumTiles);
+      const total = rrSum + setBonus;
+      return { rrRare, rrEpic, rrSuper, rrSum, setBonus, total, sumTiles };
+    }
+
+    function runSolveOptimize(timeoutMs = 3500){
+      const instances = selectedInstances.slice();
+      if(instances.length === 0){
+        clearSolution();
+        placementsEl.innerHTML = 'No pieces selected.';
+        clearIncludedList();
+        return;
+      }
+      const placementsByInstance = [];
+      for(const inst of instances){
+        const st = shapeTypes.find(s=>s.id === inst.shapeId);
+        const opts = st ? generatePlacementsForShapeType(st) : [];
+        placementsByInstance.push(opts);
+      }
+      const anyPlacement = placementsByInstance.some(arr=>arr.length>0);
+      if(!anyPlacement){
+        showInvalidSelection('No valid placement exists for any selected piece on the current unlocked grid.');
+        clearIncludedList();
+        return;
+      }
+
+      const order = instances.map((inst, idx)=>({ idx, count: placementsByInstance[idx].length || 0 }));
+      order.sort((a,b)=>a.count - b.count);
+      const indexMap = order.map(o=>o.idx);
+
+      const used = new Set();
+      let best = { total: -1, tilesByRarity: {rare:0,epic:0,super:0}, placements: [] };
+      const startTime = Date.now();
+
+      function placeAdds(placement){ return placement.cells.map(([r,c])=>`${r},${c}`); }
+
+      function backtrack(pos, curTilesByRarity, chosenPlacements){
+        if(Date.now() - startTime > timeoutMs) return;
+        if(pos >= indexMap.length){
+          const sc = scoreFromTiles(curTilesByRarity);
+          if(sc.total > best.total){
+            best = { total: sc.total, tilesByRarity: {...curTilesByRarity}, placements: chosenPlacements.slice() };
+          }
+          return;
+        }
+        const instIdx = indexMap[pos];
+        const inst = instances[instIdx];
+        const opts = placementsByInstance[instIdx];
+
+        for(const p of opts){
+          const keys = placeAdds(p);
+          let conflict = false;
+          for(const k of keys) if(used.has(k)){ conflict = true; break; }
+          if(conflict) continue;
+          for(const k of keys) used.add(k);
+          curTilesByRarity[inst.rarity] += inst.size;
+          chosenPlacements.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement: p });
+          backtrack(pos+1, curTilesByRarity, chosenPlacements);
+          chosenPlacements.pop();
+          curTilesByRarity[inst.rarity] -= inst.size;
+          for(const k of keys) used.delete(k);
+        }
+        backtrack(pos+1, curTilesByRarity, chosenPlacements);
+      }
+
+      backtrack(0, {rare:0, epic:0, super:0}, []);
+
+      if(best.total < 0 || best.placements.length === 0){
+        showInvalidSelection('No valid tiling found for your selected shapes on the current unlocked area.');
+        clearIncludedList();
+        return;
+      }
+
+      placedCells = {};
+      for(let i=0;i<best.placements.length;i++){
+        const p = best.placements[i];
+        const pid = 'P'+(i+1);
+        for(const [r,c] of p.placement.cells){
+          placedCells[`${r},${c}`] = { pid, iid: p.iid, rarity: p.rarity, colorClass: sizeToColorClass(p.placement.cells.length) };
+        }
+      }
+      updateScoreboard(best.tilesByRarity);
+      hasSolution = true;
+      renderGrid();
+      placementsEl.innerHTML = '';
+      placementsEl.appendChild(document.createTextNode(`Best Total: ${best.total} (Set Bonus ${computeSetBonus(best.tilesByRarity.rare + best.tilesByRarity.epic + best.tilesByRarity.super)})`));
+      // Render included list from the chosen placements
+      // Enhance each placement with pid to display
+      const enriched = best.placements.map((p, i) => ({ ...p, pid: 'P' + (i+1) }));
+      renderIncludedList(enriched);
+      updateExtraIndicator();
+    }
+
+    function sizeToColorClass(tileCount){
+      if(tileCount >=1 && tileCount <=3) return 'placed-red';
+      if(tileCount ===4) return 'placed-green';
+      if(tileCount ===5) return 'placed-blue';
+      return 'placed-blue';
+    }
+
+    /* scoreboard update */
+    function updateScoreboard(tilesByRarity){
+      const rrRare = tilesByRarity.rare * RARITY_VALUES.rare;
+      const rrEpic = tilesByRarity.epic * RARITY_VALUES.epic;
+      const rrSuper = tilesByRarity.super * RARITY_VALUES.super;
+      const setBonus = computeSetBonus(tilesByRarity.rare + tilesByRarity.epic + tilesByRarity.super);
+      document.getElementById('sb_tiles_rare').textContent = tilesByRarity.rare;
+      document.getElementById('sb_tiles_epic').textContent = tilesByRarity.epic;
+      document.getElementById('sb_tiles_super').textContent = tilesByRarity.super;
+      document.getElementById('sb_rr_rare').textContent = rrRare;
+      document.getElementById('sb_rr_epic').textContent = rrEpic;
+      document.getElementById('sb_rr_super').textContent = rrSuper;
+      document.getElementById('sb_set_rare').textContent = setBonus;
+      document.getElementById('sb_set_epic').textContent = setBonus;
+      document.getElementById('sb_set_super').textContent = setBonus;
+    }
+
+    function showInvalidSelection(err){
+      clearSolution();
+      placementsEl.innerHTML = `<div style="color:#fecaca;font-weight:700">Invalid selection — no tiling exists for the current selection.</div>
+        <div style="color:#9fb6d4;margin-top:6px">${err || 'Please adjust your selected shapes and try again.'}</div>`;
+    }
+
+    /* Extra indicator helpers */
+    function getUncoveredUnlockedSet(){
+      const set = new Set();
+      for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+          const k = r+','+c;
+          if(unlocked[r][c] && !placedCells[k]) set.add(k);
+        }
+      }
+      return set;
+    }
+
+    function findExtraPlacementsExample(){
+      const uncovered = getUncoveredUnlockedSet();
+      if(uncovered.size === 0) return [];
+      const examples = [];
+      for(const s of shapeTypes){
+        if(s.size <= 1) continue;
+        const placements = generatePlacementsForShapeType(s);
+        for(const p of placements){
+          const ok = p.cells.every(([r,c]) => uncovered.has(r+','+c));
+          if(ok){ examples.push({ shape: s, placement: p }); break; }
+        }
+      }
+      return examples;
+    }
+
+    function clearHighlights(){ document.querySelectorAll('.cell.extra-highlight').forEach(el=>el.classList.remove('extra-highlight')); }
+    function highlightPlacement(placement){
+      clearHighlights();
+      for(const [r,c] of placement.cells){
+        const el = document.querySelector(`.cell[data-rc="${r},${c}"]`);
+        if(el) el.classList.add('extra-highlight');
+      }
+    }
+
+    function updateExtraIndicator(){
+      if(!hasSolution){ extraIndicatorEl.style.display='none'; clearHighlights(); return; }
+      const examples = findExtraPlacementsExample();
+      if(examples.length === 0){ extraIndicatorEl.style.display='none'; clearHighlights(); return; }
+      extraIndicatorEl.style.display='block';
+      extraHeaderEl.textContent = `Additional placements possible: ${examples.length} oriented shape${examples.length>1?'s':''} (excluding monomino)`;
+      extraListEl.innerHTML = '';
+      for(const ex of examples){
+        const item = document.createElement('div'); item.className='extra-item';
+        const mini = document.createElement('div'); mini.className='mini';
+        const s = ex.shape;
+        const maxR = Math.max(...s.cells.map(p=>p[0])); const maxC = Math.max(...s.cells.map(p=>p[1]));
+        const h = Math.max(1, Math.min(3, maxR+1)); const w = Math.max(1, Math.min(3, maxC+1));
+        mini.style.gridTemplateColumns = `repeat(${w},12px)`;
+        for(let rr=0; rr<h; rr++){
+          for(let cc=0; cc<w; cc++){
+            const mc = document.createElement('div'); mc.className='mcell';
+            if(s.cells.some(p=>p[0]===rr && p[1]===cc)) mc.classList.add('on');
+            mini.appendChild(mc);
+          }
+        }
+        const idSpan = document.createElement('div'); idSpan.style.color='#cfe8ff'; idSpan.style.fontSize='13px'; idSpan.textContent = s.id;
+        const plusBtn = document.createElement('button'); plusBtn.textContent = '+';
+        plusBtn.addEventListener('click', ()=>{
+          addInstance(s.id, s.size, s.baseName);
+          renderSelectedList();
+          if(hasSolution){ runSolveOptimize(); }
+        });
+        item.addEventListener('mouseenter', ()=> highlightPlacement(ex.placement));
+        item.addEventListener('mouseleave', ()=> clearHighlights());
+        item.appendChild(mini); item.appendChild(idSpan); item.appendChild(plusBtn);
+        extraListEl.appendChild(item);
+      }
+    }
+
+    /* Controls wiring */
+    document.getElementById('solveBtn').addEventListener('click', ()=>{
+      placementsEl.innerHTML = 'Optimizing...';
+      setTimeout(()=> { runSolveOptimize(); }, 50);
     });
 
-    item.addEventListener('mouseenter', ()=> highlightPlacement(ex.placement));
-    item.addEventListener('mouseleave', ()=> clearHighlights());
+    document.getElementById('resetGrid').addEventListener('click', ()=>{
+      clearSolution();
+      applyDefaultCenter();
+      renderGrid();
+      renderSelectedList();
+      updateExtraIndicator();
+    });
 
-    item.appendChild(mini); item.appendChild(idSpan); item.appendChild(plusBtn);
-    extraListEl.appendChild(item);
+    document.getElementById('clearAll').addEventListener('click', ()=>{
+      clearAllSelections();
+    });
+
+    /* clearSolution and clearAllSelections */
+    function clearSolution(){ placedCells = {}; hasSolution = false; renderGrid(); updateExtraIndicator(); clearIncludedList(); }
+    function clearAllSelections(){
+      selectedInstances = [];
+      renderPalette();
+      renderSelectedList();
+      clearSolution();
+      placementsEl.innerHTML = '';
+      updateScoreboard({rare:0,epic:0,super:0});
+      clearIncludedList();
+    }
+
+    /* --- Initialization --- */
+    applyDefaultCenter();
+    buildShapeTypes();
+    renderPalette();
+    renderGrid();
+    renderSelectedList();
+    updateScoreboard({rare:0,epic:0,super:0});
+    clearIncludedList();
+    updateExtraIndicator();
+
+  } catch (err) {
+    console.error('Initialization failed:', err);
+    const p = document.createElement('div');
+    p.style.color = '#fecaca';
+    p.style.padding = '8px';
+    p.textContent = 'Initialization error: ' + (err && err.message ? err.message : String(err));
+    document.body.insertBefore(p, document.body.firstChild);
   }
-}
-
-/* Hooks */
-document.getElementById('solveBtn').addEventListener('click', ()=>{
-  placementsEl.innerHTML = 'Solving...';
-  setTimeout(()=>{
-    const res = solveOnce(MAX_PIECES);
-    if(res.ok){
-      if(res.placements.length===0){ placementsEl.innerHTML='No pieces selected.'; clearSolution(); }
-      else visualizeSolution(res.placements);
-    } else { showInvalidSelection(res.error); }
-  }, 50);
 });
-
-// Reset grid preserves selection (existing behavior)
-document.getElementById('resetGrid').addEventListener('click', ()=>{
-  clearSolution();
-  applyDefaultCenter();
-  renderGrid();
-  renderSelectedList();
-});
-
-// Clear button: now deletes all selected shapes AND clears visualization/message
-document.getElementById('clearSolution').addEventListener('click', ()=>{
-  clearAllSelections();
-});
-
-/* init */
-applyDefaultCenter();
-buildShapeTypes();
-shapeTypes.forEach(s=> shapeCounts[s.id]=0);
-renderPalette();
-renderGrid();
-renderSelectedList();
-updateExtraIndicator();
-
 </script>
 </body>
 </html>
