@@ -251,6 +251,11 @@
    Changes: Added "Dual Set Bonus" dropdown which becomes active when unlocked tiles >= 24 and lists combinations
             of per-set set-bonus thresholds (0,9,12,15,18,21) that fit into the unlocked tile count.
             When a combination is selected, the solver forces final solutions to meet both set tile targets.
+   Additional changes requested by user:
+    - Saving a solution saves unlocked tiles and selected shapes + their rarities.
+    - Overwrite and Delete confirm before action.
+    - Reset removes shapes on grid AND clears "Shapes selected" and reverts grid to original default.
+    - Clear removes shapes on grid AND clears "Shapes selected" but keeps current unlocked grid.
 */
 
 const USER_KEY = 'hoangnh1630-rgb';
@@ -828,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const p = best.placements[i];
       const pid = 'P'+(i+1);
       for(const [r,c] of p.placement.cells){
-        placedCells[`${r},${c}`] = { pid, iid: p.iid, rarity: p.rarity, set: p.set, colorClass: sizeToColorClass(p.placement.cells.length) };
+        placedCells[`${r},${c}`] = { pid, iid: p.iid, shapeId: p.shapeId, rarity: p.rarity, set: p.set, colorClass: sizeToColorClass(p.placement.cells.length) };
       }
     }
     updateScoreboard(best.tilesByRarityBySet || { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, best.setBonus1 || 0, best.setBonus2 || 0);
@@ -963,32 +968,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
       saveBtn.addEventListener('click', ()=>{
         if(!hasSolution || Object.keys(placedCells).length===0){ alert('No solution to save. Solve first.'); return; }
-        const arr=loadSaves(); const name=nameInput.value||`Slot ${i+1}`; const placedCopy=JSON.parse(JSON.stringify(placedCells));
+        // Confirm overwrite if slot occupied
+        const arr=loadSaves();
+        if(arr[i]){
+          const ok = confirm(`Overwrite saved slot "${(arr[i].name||`Slot ${i+1}`)}"?`);
+          if(!ok) return;
+        }
+        const name=nameInput.value||`Slot ${i+1}`;
+        const placedCopy=JSON.parse(JSON.stringify(placedCells));
         const tilesByRarity = {
           set1:{ rare: parseInt(document.getElementById('sb_tiles1_rare').textContent)||0, epic: parseInt(document.getElementById('sb_tiles1_epic').textContent)||0, super: parseInt(document.getElementById('sb_tiles1_super').textContent)||0 },
           set2:{ rare: parseInt(document.getElementById('sb_tiles2_rare').textContent)||0, epic: parseInt(document.getElementById('sb_tiles2_epic').textContent)||0, super: parseInt(document.getElementById('sb_tiles2_super').textContent)||0 }
         };
         const totalMatch = placementsEl.textContent.match(/Best Total:\s*(\d+)/); const total = totalMatch ? parseInt(totalMatch[1]) : 0;
-        arr[i] = { name, placedCells: placedCopy, tilesByRarity, total, timestamp: Date.now() };
+        // capture set bonuses from scoreboard display
+        const setBonus1 = parseInt(document.getElementById('sb_set1_rare').textContent) || 0;
+        const setBonus2 = parseInt(document.getElementById('sb_set2_rare').textContent) || 0;
+        // Save unlocked grid and selectedInstances and nextInstanceId to allow restoring selection and rarities
+        const unlockedCopy = unlocked.map(row => row.slice());
+        const selectedCopy = JSON.parse(JSON.stringify(selectedInstances));
+        arr[i] = { name, placedCells: placedCopy, tilesByRarity, total, timestamp: Date.now(), unlocked: unlockedCopy, selectedInstances: selectedCopy, nextInstanceId, setBonus1, setBonus2 };
         saveSaves(arr); renderSaveSlots();
       });
       loadBtn.addEventListener('click', ()=>{
         const arr=loadSaves(); const s=arr[i]; if(!s){ alert('Empty slot'); return; }
-        placedCells = JSON.parse(JSON.stringify(s.placedCells)); hasSolution=true; renderGrid(); updateScoreboard(s.tilesByRarity||{set1:{rare:0,epic:0,super:0},set2:{rare:0,epic:0,super:0}},0,0);
+        // Restore unlocked grid and selected instances as saved
+        if(s.unlocked && Array.isArray(s.unlocked) && s.unlocked.length===ROWS){
+          unlocked = s.unlocked.map(row => row.slice());
+        }
+        if(s.selectedInstances && Array.isArray(s.selectedInstances)){
+          selectedInstances = JSON.parse(JSON.stringify(s.selectedInstances));
+          // ensure nextInstanceId is set so future adds don't collide
+          if(typeof s.nextInstanceId === 'number' && s.nextInstanceId > nextInstanceId) nextInstanceId = s.nextInstanceId;
+          else {
+            // find max iid numeric and set nextInstanceId appropriately
+            const maxIid = selectedInstances.reduce((mx,si)=> {
+              const n = parseInt((''+si.iid).replace(/^I/,''));
+              return isNaN(n) ? mx : Math.max(mx,n);
+            }, 0);
+            nextInstanceId = Math.max(nextInstanceId, maxIid + 1);
+          }
+        } else {
+          selectedInstances = [];
+        }
+
+        // Restore placedCells and scoreboard
+        placedCells = JSON.parse(JSON.stringify(s.placedCells || {})); hasSolution=true;
+        const tilesByRarity = s.tilesByRarity || { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} };
+        const setB1 = s.setBonus1 || 0;
+        const setB2 = s.setBonus2 || 0;
+        renderPalette(); renderSelectedList();
+        renderGrid(); updateScoreboard(tilesByRarity, setB1, setB2);
         // reconstruct included placements approximately
         const byPid={};
         for(const k of Object.keys(placedCells)){ const p=placedCells[k]; if(!byPid[p.pid]) byPid[p.pid]={ iid:p.iid, shapeId:p.shapeId||'S1', rarity:p.rarity, placement:{cells:[]}, set:p.set }; const [r,c]=k.split(',').map(Number); byPid[p.pid].placement.cells.push([r,c]); }
         const placements=[]; for(const pid of Object.keys(byPid)) placements.push(byPid[pid]);
-        renderIncludedList(placements); updateExtraIndicator();
+        renderIncludedList(placements); updateExtraIndicator(); updateDualSetBonusOptions();
       });
-      delBtn.addEventListener('click', ()=>{ const arr=loadSaves(); arr[i]=null; saveSaves(arr); renderSaveSlots(); });
+      delBtn.addEventListener('click', ()=>{ const arr=loadSaves(); if(!arr[i]) return; const ok = confirm(`Delete saved slot "${(arr[i].name||`Slot ${i+1}`)}"?`); if(!ok) return; arr[i]=null; saveSaves(arr); renderSaveSlots(); });
     });
   }
 
   // UI wiring
   document.getElementById('solveBtn').addEventListener('click', ()=>{ placementsEl.innerHTML='Optimizing...'; setTimeout(()=>runSolveOptimize(3500),50); });
-  document.getElementById('resetGrid').addEventListener('click', ()=>{ clearSolution(); applyDefaultCenter(); renderGrid(); renderSelectedList(); updateDualSetBonusOptions(); updateExtraIndicator(); setTimeout(adjustInfoPanelPosition,30); });
-  document.getElementById('clearAll').addEventListener('click', ()=>{ selectedInstances=[]; renderPalette(); renderSelectedList(); clearSolution(); placementsEl.innerHTML=''; updateScoreboard(); clearIncludedList(); updateDualSetBonusOptions(); setTimeout(adjustInfoPanelPosition,30); });
+  document.getElementById('resetGrid').addEventListener('click', ()=>{
+    // Reset: delete all shapes shown on the grid AND shapes in "Shapes selected" and revert the current grid back to original state.
+    selectedInstances = []; renderPalette(); renderSelectedList();
+    clearSolution();
+    applyDefaultCenter();
+    renderGrid();
+    updateDualSetBonusOptions();
+    updateExtraIndicator();
+    setTimeout(adjustInfoPanelPosition,30);
+  });
+  document.getElementById('clearAll').addEventListener('click', ()=>{
+    // Clear: deletes all shapes shown on the grid and shapes in "Shapes selected" while keeping current grid.
+    selectedInstances=[];
+    renderPalette();
+    renderSelectedList();
+    clearSolution();
+    placementsEl.innerHTML='';
+    updateScoreboard();
+    clearIncludedList();
+    updateDualSetBonusOptions();
+    setTimeout(adjustInfoPanelPosition,30);
+  });
   window.addEventListener('resize', ()=> setTimeout(adjustInfoPanelPosition,30));
 
   // init functions: apply center, build shapes, render everything
