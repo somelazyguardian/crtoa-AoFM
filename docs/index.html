@@ -535,31 +535,33 @@ function renderGrid(){
 
         div.dataset.rarity = placed.rarity;
 
-        // For Unique pieces: show centered "U" (no split)
+        // Unique: centered "U"
         if(placed.rarity === 'unique'){
           const span = document.createElement('div');
           span.className = 'tile-label-center';
           span.textContent = 'U';
           div.appendChild(span);
         } else {
-          // Non-unique: split left = set index (1 or 2), right = piece index parsed from pid (P#)
-          // set label (fall back to empty if not present)
-          const setLabel = (typeof placed.set === 'number' && (placed.set === 1 || placed.set === 2)) ? String(placed.set) : (placed.displayLabel ? (placed.displayLabel.startsWith('S-') ? placed.displayLabel.slice(2) : '') : '');
+          // Non-unique: left = "S-#", right = "P#"
+          // Set label: prefer explicit set number if available
+          const setLabel = (typeof placed.set === 'number' && (placed.set === 1 || placed.set === 2))
+            ? `S-${placed.set}`
+            : (placed.displayLabel ? placed.displayLabel : '');
 
-          // piece index: parse number from pid (e.g., 'P3' -> '3'), fallback to iid numeric suffix if possible
+          // Piece index: try to use placed.pid if it matches P#, otherwise fall back to iid numeric suffix
           let pieceIndex = '';
           if(placed.pid){
             const m = (''+placed.pid).match(/P(\d+)/);
-            if(m) pieceIndex = m[1];
+            if(m) pieceIndex = `P${m[1]}`;
+            else pieceIndex = placed.pid; // if it's already in another form, keep it
           }
           if(!pieceIndex && placed.iid){
             const m2 = (''+placed.iid).match(/I(\d+)/);
-            if(m2) pieceIndex = m2[1];
+            if(m2) pieceIndex = `P${m2[1]}`; // convert I# -> P#
           }
-          // final fallback to an empty string so UI doesn't show 'undefined'
           pieceIndex = pieceIndex || '';
 
-          // build the two-part label
+          // build the two-part label element
           const wrapper = document.createElement('div');
           wrapper.className = 'tile-label';
           const left = document.createElement('div');
