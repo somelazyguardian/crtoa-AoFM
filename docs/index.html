@@ -34,6 +34,34 @@
   .cell.locked{background:#233045;border:1px solid #0f1724;color:#6b7280}
   .cell.unlocked{background:#dbeafe;color:#022c3a;box-shadow:inset 0 -3px 6px rgba(0,0,0,0.06)}
   .cell.placed{color:#022c3a}
+  .cell .tile-label {
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:2px 6px;
+  font-size:12px;
+  font-weight:700;
+  box-sizing:border-box;
+  pointer-events:none; /* keep cell click events intact */
+}
+.cell .tile-label-left {
+  text-align:left;
+  flex:0 0 36%;
+  color: rgba(0,0,0,0.9);
+}
+.cell .tile-label-right {
+  text-align:right;
+  flex:0 0 36%;
+  color: rgba(0,0,0,0.9);
+}
+.cell .tile-label-center {
+  width:100%;
+  text-align:center;
+  pointer-events:none;
+  font-weight:700;
+}
   .placed-red{background:linear-gradient(135deg,#fca5a5,#fecaca); color:#3a0a0a}
   .placed-green{background:linear-gradient(135deg,#86efac,#bbf7d0); color:#03210a}
   .placed-blue{background:linear-gradient(135deg,#93c5fd,#bfdbfe); color:#021029}
@@ -484,6 +512,10 @@ function buildUniqueTypes(){
 
 function updateUnlockedCounter(){ let cnt=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(window.unlocked[r][c]) cnt++; unlockedCounterEl.textContent=`Unlocked: ${cnt}`; }
 
+// Replace the existing `function renderGrid(){ ... }` in the <script> with this version.
+// It shows "set index" on the left and "piece index" on the right (e.g., "1" and "3") for non-unique pieces.
+// Unique pieces show a single centered "U" and are not split.
+
 function renderGrid(){
   gridEl.innerHTML = '';
   for(let r=0;r<ROWS;r++){
@@ -491,21 +523,60 @@ function renderGrid(){
       const div = document.createElement('div');
       const k = r+','+c;
       const placed = window.placedCells[k];
+
       div.className = 'cell ' + (placed ? 'placed' : (window.unlocked[r][c] ? 'unlocked' : 'locked'));
+
       if(placed){
         if(placed.colorClass) div.classList.add(placed.colorClass);
         if(placed.rarity === 'rare') div.classList.add('outline-rare');
         else if(placed.rarity === 'epic') div.classList.add('outline-epic');
         else if(placed.rarity === 'super') div.classList.add('outline-super');
         else if(placed.rarity === 'unique') div.classList.add('outline-unique');
+
         div.dataset.rarity = placed.rarity;
 
-        // Show 'U' for Unique pieces; otherwise show the set label (S-1 / S-2) via displayLabel or fallback to pid
-        const label = (placed.rarity === 'unique') ? 'U' : (placed.displayLabel || placed.pid || '');
-        div.textContent = label;
+        // For Unique pieces: show centered "U" (no split)
+        if(placed.rarity === 'unique'){
+          const span = document.createElement('div');
+          span.className = 'tile-label-center';
+          span.textContent = 'U';
+          div.appendChild(span);
+        } else {
+          // Non-unique: split left = set index (1 or 2), right = piece index parsed from pid (P#)
+          // set label (fall back to empty if not present)
+          const setLabel = (typeof placed.set === 'number' && (placed.set === 1 || placed.set === 2)) ? String(placed.set) : (placed.displayLabel ? (placed.displayLabel.startsWith('S-') ? placed.displayLabel.slice(2) : '') : '');
+
+          // piece index: parse number from pid (e.g., 'P3' -> '3'), fallback to iid numeric suffix if possible
+          let pieceIndex = '';
+          if(placed.pid){
+            const m = (''+placed.pid).match(/P(\d+)/);
+            if(m) pieceIndex = m[1];
+          }
+          if(!pieceIndex && placed.iid){
+            const m2 = (''+placed.iid).match(/I(\d+)/);
+            if(m2) pieceIndex = m2[1];
+          }
+          // final fallback to an empty string so UI doesn't show 'undefined'
+          pieceIndex = pieceIndex || '';
+
+          // build the two-part label
+          const wrapper = document.createElement('div');
+          wrapper.className = 'tile-label';
+          const left = document.createElement('div');
+          left.className = 'tile-label-left';
+          left.textContent = setLabel;
+          const right = document.createElement('div');
+          right.className = 'tile-label-right';
+          right.textContent = pieceIndex;
+
+          wrapper.appendChild(left);
+          wrapper.appendChild(right);
+          div.appendChild(wrapper);
+        }
       } else {
         div.textContent = '';
       }
+
       div.dataset.rc = k;
       div.title = placed ? `Placed ${placed && (placed.displayLabel || placed.pid) ? (placed.displayLabel || placed.pid) : ''} (set ${placed && placed.set ? placed.set : ''})` : (window.unlocked[r][c] ? 'Unlocked' : 'Locked');
       div.addEventListener('click', ()=> {
