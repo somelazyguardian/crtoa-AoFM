@@ -927,161 +927,70 @@ function runSolveOptimize(timeoutMs = 3500){
 }
 
 /* Internal solver implementation (copied in full for completeness) */
-/*
-Patch: replacement implementation for function _runSolverInternal(timeoutMs)
-Where to paste: In the HTML you provided, open the <script> section and find the existing
-function declaration that starts with:
-
-  function _runSolverInternal(timeoutMs){
-
-Replace that entire function body (from that line through the matching closing brace)
-with the contents of this file.
-
-This updated implementation adds:
- - quick infeasibility checks (total tiles vs unlocked tiles)
- - connected-component check for small isolated unlocked regions
- - a timedOut flag to distinguish "no solution found" from "search timed out"
- - clearer messages to the user when a quick check fails or the solver timed out
-
-Apply the replacement exactly; no other modifications are required.
-*/
-
 function _runSolverInternal(timeoutMs){
-  // Copy of selected instances (work on the copy)
   const instances = window.selectedInstances.slice();
-
-  // Basic validation for Unique mode
-  if (window.includeUnique) {
-    const hasUniqueInst = instances.some(i => i.rarity === 'unique');
-    if (!hasUniqueInst) {
+  if(window.includeUnique){
+    const hasUniqueInst = instances.some(i=>i.rarity==='unique');
+    if(!hasUniqueInst){
       showInvalidSelection('Include Unique is enabled but no Unique shape is selected.');
-      clearIncludedList();
-      return;
+      clearIncludedList(); return;
     }
   }
 
-  // If no pieces selected, clear UI and exit
-  if (instances.length === 0) {
-    clearSolution();
-    placementsEl.innerHTML = 'No pieces selected.';
-    clearIncludedList();
-    return;
+  if(instances.length === 0){
+    clearSolution(); placementsEl.innerHTML = 'No pieces selected.'; clearIncludedList(); return;
   }
 
-  // QUICK PRE-CHECK 1: total selected tiles must not exceed unlocked tiles
-  const totalUnlocked = countUnlockedTiles();
-  const totalSelectedTiles = instances.reduce((acc, it) => acc + (it.size || 0), 0);
-  if (totalSelectedTiles > totalUnlocked) {
-    showInvalidSelection(`Selected pieces require ${totalSelectedTiles} tiles but only ${totalUnlocked} tiles are unlocked.`);
-    clearIncludedList();
-    return;
-  }
-
-  // QUICK PRE-CHECK 2: connected component sizes
-  // Compute sizes of connected components of unlocked cells (4-neighbor).
-  function computeUnlockedComponents(){
-    const compSizes = [];
-    const seen = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>false));
-    for(let r=0;r<ROWS;r++){
-      for(let c=0;c<COLS;c++){
-        if(!window.unlocked[r][c] || seen[r][c]) continue;
-        // BFS
-        let size = 0;
-        const q = [[r,c]];
-        seen[r][c] = true;
-        while(q.length){
-          const [cr,cc] = q.shift();
-          size++;
-          const nbrs = [[cr-1,cc],[cr+1,cc],[cr,cc-1],[cr,cc+1]];
-          for(const [nr,nc] of nbrs){
-            if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS && !seen[nr][nc] && window.unlocked[nr][nc]){
-              seen[nr][nc] = true;
-              q.push([nr,nc]);
-            }
-          }
-        }
-        compSizes.push(size);
-      }
-    }
-    return compSizes;
-  }
-
-  const compSizes = computeUnlockedComponents();
-  if (compSizes.length > 0) {
-    // smallest piece size among selected non-unique pieces (unique is large; include it if present)
-    const minPieceSize = Math.min(...instances.map(i => i.size || Infinity));
-    const tinyComp = compSizes.find(sz => sz > 0 && sz < minPieceSize);
-    if (tinyComp) {
-      showInvalidSelection(`There is a small disconnected unlocked region (${tinyComp} tile${tinyComp>1?'s':''}) smaller than the smallest selected piece (${minPieceSize}).`);
-      clearIncludedList();
-      return;
-    }
-  }
-
-  // Generate placements for each instance (this was the existing logic)
   const placementsByInstance = instances.map(inst => {
-    if (inst.rarity === 'unique') {
+    if(inst.rarity === 'unique'){
       const rep = window.uniqueTypes.find(u => u.baseName === inst.baseName) || window.uniqueTypes.find(u => u.baseName === inst.shapeId) || { cells: inst.cells || [[0,0]] };
       const tempShape = { id: rep.id, baseName: inst.baseName || inst.shapeId, cells: rep.cells };
       return generatePlacementsForShape(tempShape);
     } else {
-      const st = window.shapeTypes.find(s => s.id === inst.shapeId);
+      const st = window.shapeTypes.find(s=>s.id===inst.shapeId);
       return st ? generatePlacementsForShape(st) : [];
     }
   });
 
-  // If any forced piece (super/unique) has zero placements, report immediately
-  for (let i = 0; i < instances.length; i++) {
+  for(let i=0;i<instances.length;i++){
     const inst = instances[i];
-    if ((inst.rarity === 'super' || inst.rarity === 'unique') && placementsByInstance[i].length === 0) {
-      showInvalidSelection(`One or more ${inst.rarity === 'super' ? 'Super Epic' : 'Unique'} pieces have no valid placement on the current unlocked grid. They must be placeable.`);
-      clearIncludedList();
-      return;
+    if((inst.rarity==='super' || inst.rarity==='unique') && placementsByInstance[i].length===0){
+      showInvalidSelection(`One or more ${inst.rarity==='super' ? 'Super Epic' : 'Unique'} pieces have no valid placement on the current unlocked grid. They must be placeable.`);
+      clearIncludedList(); return;
     }
   }
 
-  const anyPlacement = placementsByInstance.some(arr => arr.length > 0);
-  if (!anyPlacement) {
-    showInvalidSelection('No valid placement exists for any selected piece on the current unlocked grid.');
-    clearIncludedList();
-    return;
-  }
+  const anyPlacement = placementsByInstance.some(arr=>arr.length>0);
+  if(!anyPlacement){ showInvalidSelection('No valid placement exists for any selected piece on the current unlocked grid.'); clearIncludedList(); return; }
 
-  // Parse selected dualSet targets (existing logic)
   let requiredSet1 = 0, requiredSet2 = 0;
   const sel = dualSetSelect.value;
-  if (sel && sel !== 'none') {
-    const parts = ('' + sel).split('-').map(x => parseInt(x, 10) || 0);
-    if (parts.length === 2) {
-      requiredSet1 = Math.max(0, parts[0]);
-      requiredSet2 = Math.max(0, parts[1]);
-    }
+  if(sel && sel !== 'none'){
+    const parts = (''+sel).split('-').map(x=>parseInt(x,10)||0);
+    if(parts.length===2){ requiredSet1 = Math.max(0, parts[0]); requiredSet2 = Math.max(0, parts[1]); }
   }
-  if (requiredSet1 + requiredSet2 > totalUnlocked) {
+
+  const totalUnlocked = countUnlockedTiles();
+  if(requiredSet1 + requiredSet2 > totalUnlocked){
     showInvalidSelection('Selected Dual Set Bonus cannot be satisfied with current unlocked tiles.');
     return;
   }
 
-  // Re-order instances for search (existing heuristic)
-  const idxs = instances.map((inst, idx) => ({
-    idx,
-    rarityOrder: inst.rarity === 'super' ? 0 : (inst.rarity === 'unique' ? 0 : (inst.rarity === 'epic' ? 1 : 2)),
-    opts: placementsByInstance[idx].length || 0
-  }));
-  idxs.sort((a, b) => a.rarityOrder - b.rarityOrder || a.opts - b.opts);
-  const indexMap = idxs.map(o => o.idx);
+  const idxs = instances.map((inst, idx)=>({ idx, rarityOrder: inst.rarity==='super' ? 0 : (inst.rarity==='unique' ? 0 : (inst.rarity==='epic'?1:2)), opts: placementsByInstance[idx].length || 0 }));
+  idxs.sort((a,b)=> a.rarityOrder - b.rarityOrder || a.opts - b.opts);
+  const indexMap = idxs.map(o=>o.idx);
 
-  function placeAdds(placement){ return placement.cells.map(([r,c]) => `${r},${c}`); }
+  function placeAdds(placement){ return placement.cells.map(([r,c])=>`${r},${c}`); }
 
   function computeScores(curTiles, uniqueIncluded){
-    const rrRare = curTiles.set1.rare * RARITY_VALUES.rare + curTiles.set2.rare * RARITY_VALUES.rare;
-    const rrEpic = curTiles.set1.epic * RARITY_VALUES.epic + curTiles.set2.epic * RARITY_VALUES.epic;
-    const rrSuper = curTiles.set1.super * RARITY_VALUES.super + curTiles.set2.super * RARITY_VALUES.super;
+    const rrRare = curTiles.set1.rare*RARITY_VALUES.rare + curTiles.set2.rare*RARITY_VALUES.rare;
+    const rrEpic = curTiles.set1.epic*RARITY_VALUES.epic + curTiles.set2.epic*RARITY_VALUES.epic;
+    const rrSuper = curTiles.set1.super*RARITY_VALUES.super + curTiles.set2.super*RARITY_VALUES.super;
     const rrSum = rrRare + rrEpic + rrSuper;
-    const total1 = curTiles.set1.rare + curTiles.set1.epic + curTiles.set1.super;
-    const total2 = curTiles.set2.rare + curTiles.set2.epic + curTiles.set2.super;
-    const overflow = Math.max(0, total1 - 21);
-    const set1ForBonus = Math.min(total1, 21);
+    const total1 = curTiles.set1.rare+curTiles.set1.epic+curTiles.set1.super;
+    const total2 = curTiles.set2.rare+curTiles.set2.epic+curTiles.set2.super;
+    const overflow = Math.max(0,total1-21);
+    const set1ForBonus = Math.min(total1,21);
     const set2ForBonus = total2 + overflow;
     const setBonus1 = computeSetBonus(set1ForBonus);
     const setBonus2 = computeSetBonus(set2ForBonus);
@@ -1089,51 +998,44 @@ function _runSolverInternal(timeoutMs){
     return { rrSum, setBonus1, setBonus2, total1, total2, uniqueBonus };
   }
 
-  // Solver wrapper that will set a timed-out flag if time budget exceeded
-  let anyTimedOut = false;
-
-  function solveVariant(timeBudgetMs = 1000, allowRares = true){
+  function solveVariant(timeBudgetMs=1000, allowRares=true){
     const start = Date.now();
     const used = new Set();
     let best = { actualTotal:-1, placements:[], tilesByRarityBySet:{set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0}}, rrSum:0, setBonus1:0, setBonus2:0, uniqueIncluded:false, supersPlaced:0, epicsPlaced:0 };
 
     function backtrack(pos, curTiles, chosen, uniqueIncluded){
-      // Enforce time budget for this variant
-      if (Date.now() - start > timeBudgetMs) {
-        anyTimedOut = true;
-        return;
-      }
-      if (pos >= indexMap.length) {
-        const mandatorySupers = instances.filter(x => x.rarity === 'super').length;
-        const mandatoryUnique = window.includeUnique ? instances.filter(x => x.rarity === 'unique').length : 0;
+      if(Date.now()-start > timeBudgetMs) return;
+      if(pos>=indexMap.length){
+        const mandatorySupers = instances.filter(x=>x.rarity==='super').length;
+        const mandatoryUnique = window.includeUnique ? instances.filter(x=>x.rarity==='unique').length : 0;
         const supersPlaced = curTiles.set1.super + curTiles.set2.super;
-        if (supersPlaced < mandatorySupers) return;
-        if (mandatoryUnique > 0 && !uniqueIncluded) return;
+        if(supersPlaced < mandatorySupers) return;
+        if(mandatoryUnique > 0 && !uniqueIncluded) return;
 
         const total1 = curTiles.set1.rare + curTiles.set1.epic + curTiles.set1.super;
         const total2 = curTiles.set2.rare + curTiles.set2.epic + curTiles.set2.super;
-        if (total1 < requiredSet1) return;
-        if (total2 < requiredSet2) return;
+        if(total1 < requiredSet1) return;
+        if(total2 < requiredSet2) return;
 
         const sc = computeScores(curTiles, uniqueIncluded);
         const actualTotal = sc.rrSum + sc.setBonus1 + sc.setBonus2 + sc.uniqueBonus;
         const epicsPlaced = curTiles.set1.epic + curTiles.set2.epic;
 
-        let better = false;
-        if (actualTotal > best.actualTotal) better = true;
-        else if (actualTotal === best.actualTotal) {
-          if (supersPlaced > (best.supersPlaced || 0)) better = true;
-          else if (supersPlaced === (best.supersPlaced || 0)) {
-            if (epicsPlaced > (best.epicsPlaced || 0)) better = true;
-            else if (epicsPlaced === (best.epicsPlaced || 0)) {
+        let better=false;
+        if(actualTotal > best.actualTotal) better=true;
+        else if(actualTotal === best.actualTotal){
+          if(supersPlaced > (best.supersPlaced||0)) better=true;
+          else if(supersPlaced === (best.supersPlaced||0)){
+            if(epicsPlaced > (best.epicsPlaced||0)) better=true;
+            else if(epicsPlaced === (best.epicsPlaced||0)){
               const raresPlaced = curTiles.set1.rare + curTiles.set2.rare;
               const bestRares = best.tilesByRarityBySet ? (best.tilesByRarityBySet.set1.rare + best.tilesByRarityBySet.set2.rare) : Infinity;
-              if (raresPlaced < bestRares) better = true;
+              if(raresPlaced < bestRares) better=true;
             }
           }
         }
 
-        if (better) {
+        if(better){
           best.actualTotal = actualTotal;
           best.rrSum = sc.rrSum;
           best.setBonus1 = sc.setBonus1;
@@ -1154,73 +1056,56 @@ function _runSolverInternal(timeoutMs){
       const isUnique = inst.rarity === 'unique';
       const mandatory = inst.rarity === 'super' || inst.rarity === 'unique';
 
-      for (const p of opts) {
-        if (isRare && !allowRares) continue;
-        const keys = placeAdds(p); let conflict = false;
-        for (const k of keys) if (used.has(k)) { conflict = true; break; }
-        if (conflict) continue;
-        for (const k of keys) used.add(k);
-        const target = inst.set === 2 ? 'set2' : 'set1';
-        if (!isUnique) curTiles[target][inst.rarity] += inst.size;
+      for(const p of opts){
+        if(isRare && !allowRares) continue;
+        const keys = placeAdds(p); let conflict=false;
+        for(const k of keys) if(used.has(k)){ conflict=true; break; }
+        if(conflict) continue;
+        for(const k of keys) used.add(k);
+        const target = inst.set===2 ? 'set2' : 'set1';
+        if(!isUnique) curTiles[target][inst.rarity] += inst.size;
         chosen.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement: p, set: inst.set });
-        backtrack(pos + 1, curTiles, chosen, uniqueIncluded || isUnique);
+        backtrack(pos+1, curTiles, chosen, uniqueIncluded || isUnique);
         chosen.pop();
-        if (!isUnique) curTiles[target][inst.rarity] -= inst.size;
-        for (const k of keys) used.delete(k);
-        // Time check after unwinding to allow graceful exit
-        if (Date.now() - start > timeBudgetMs) {
-          anyTimedOut = true;
-          return;
-        }
+        if(!isUnique) curTiles[target][inst.rarity] -= inst.size;
+        for(const k of keys) used.delete(k);
       }
-      if (!mandatory) backtrack(pos + 1, curTiles, chosen, uniqueIncluded);
+      if(!mandatory) backtrack(pos+1, curTiles, chosen, uniqueIncluded);
     }
 
     backtrack(0, { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, [], false);
     return best;
   }
 
-  // Try several variants with reasonable time slices (existing approach)
-  const t = Math.max(200, Math.floor(timeoutMs / 3));
-  const a = solveVariant(t, false);
-  const a2 = solveVariant(t, true);
-  const b = solveVariant(t, false);
-  const b2 = solveVariant(t, true);
-  const cand = [a2,b2,a,b].filter(c => c && c.placements && c.placements.length > 0);
+  const t = Math.max(200, Math.floor(timeoutMs/3));
+  const a = solveVariant(t,false);
+  const a2 = solveVariant(t,true);
+  const b = solveVariant(t,false);
+  const b2 = solveVariant(t,true);
+  const cand = [a2,b2,a,b].filter(c => c && c.placements && c.placements.length>0);
 
-  // If no candidate found and solver ever timed out, surface a different message
-  if (cand.length === 0) {
-    if (anyTimedOut) {
-      showInvalidSelection('Search timed out — a tiling may exist but the solver did not finish. Try removing pieces, enabling fewer rares, or increasing the timeout.');
-    } else {
-      showInvalidSelection('No valid tiling found (that satisfies the constraints).');
-    }
-    clearIncludedList();
-    return;
-  }
+  if(cand.length===0){ showInvalidSelection('No valid tiling found (that satisfies the constraints).'); clearIncludedList(); return; }
 
-  // Pick best candidate (existing tie-breakers already present)
   cand.sort((x,y)=>{
-    if (x.actualTotal !== y.actualTotal) return y.actualTotal - x.actualTotal;
-    if ((x.supersPlaced || 0) !== (y.supersPlaced || 0)) return (y.supersPlaced || 0) - (x.supersPlaced || 0);
-    if ((x.epicsPlaced || 0) !== (y.epicsPlaced || 0)) return (y.epicsPlaced || 0) - (x.epicsPlaced || 0);
+    if(x.actualTotal !== y.actualTotal) return y.actualTotal - x.actualTotal;
+    if((x.supersPlaced||0) !== (y.supersPlaced||0)) return (y.supersPlaced||0) - (x.supersPlaced||0);
+    if((x.epicsPlaced||0) !== (y.epicsPlaced||0)) return (y.epicsPlaced||0) - (x.epicsPlaced||0);
     return 0;
   });
   const best = cand[0];
 
   const bestTotal1 = (best.tilesByRarityBySet && best.tilesByRarityBySet.set1) ? (best.tilesByRarityBySet.set1.rare + best.tilesByRarityBySet.set1.epic + best.tilesByRarityBySet.set1.super) : 0;
   const bestTotal2 = (best.tilesByRarityBySet && best.tilesByRarityBySet.set2) ? (best.tilesByRarityBySet.set2.rare + best.tilesByRarityBySet.set2.epic + best.tilesByRarityBySet.set2.super) : 0;
-  if (bestTotal1 < requiredSet1 || bestTotal2 < requiredSet2) {
+  if(bestTotal1 < requiredSet1 || bestTotal2 < requiredSet2){
     showInvalidSelection('No tiling found that satisfies the selected Dual Set Bonus targets.');
     return;
   }
 
-  // Commit placements to global placedCells (existing UI plumbing)
   window.placedCells = {};
-  for (let i = 0; i < best.placements.length; i++) {
+  for(let i=0;i<best.placements.length;i++){
     const p = best.placements[i];
-    const pid = 'P' + (i + 1);
-    for (const [r,c] of p.placement.cells) {
+    const pid = 'P'+(i+1);
+    for(const [r,c] of p.placement.cells){
       window.placedCells[`${r},${c}`] = { pid, iid: p.iid, shapeId: p.shapeId, rarity: p.rarity, set: p.set, colorClass: sizeToColorClassForPlacement(p) };
     }
   }
@@ -1234,6 +1119,7 @@ function _runSolverInternal(timeoutMs){
   renderIncludedList(best.placements);
   updateExtraIndicator();
 }
+
 /* ---------- Save/load (robust) ---------- */
 function sanitizeSlot(slot){
   if(!slot || typeof slot !== 'object') return null;
