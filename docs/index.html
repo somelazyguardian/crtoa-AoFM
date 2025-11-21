@@ -1,5 +1,20 @@
 <!doctype html>
 <html>
+<section class="devlog-box" style="margin-top:24px; max-width:820px;">
+  <div class="devlog-header" style="background:linear-gradient(90deg,#233045,#2563eb);color:#fff;font-weight:700;font-size:15px;padding:10px 12px 8px 12px;border-radius:8px 8px 0 0;">
+    Devlog
+  </div>
+  <div class="devlog-body" style="background:linear-gradient(180deg,#1e293b,#071421 60%);color:#cfe8ff;font-size:14px;padding:16px 14px 20px 14px;border-radius:0 0 8px 8px;border:1px solid #233045;">
+    <strong>2024-06-15</strong> – I give up.  
+    <ul>
+      <li>I'm just gonna be straight-forward, this whole site was literally built by nothing but AI and constant testing to make sure everything works out, the only thing I can't get right however is the algorithm, some find it to be working, some don't. So please, I beg of users who truly appreciate the time I wasted to make this site out of pure spite and frustration towards CR:TOA's current state, to use this more of a template or a testing ground rather than a perfect tool that you can do however you want with it and expect perfect results. If you want any small additional QoL changes made to the site (do not come complaining to me about the algorithm), ping or DM me anytime. - LazyGuardian</li>
+      <li>If you want higher chances of getting a satisfactory solution, I'd recommend not selecting too many shapes, just enough.</li>
+    </ul>
+    <!--
+      To update the Devlog: Only change this HTML! Add new sections, write markdown-style lists, etc.
+    -->
+  </div>
+</section>
 <head>
 <meta charset="utf-8"/>
 <title>CR:TOA Rift Resistance Optimizer</title>
@@ -358,6 +373,23 @@
     </div>
   </div>
 </div>
+
+  <section class="devlog-box" style="margin-top:24px; max-width:820px;">
+  <div class="devlog-header" style="background:linear-gradient(90deg,#233045,#2563eb);color:#fff;font-weight:700;font-size:15px;padding:10px 12px 8px 12px;border-radius:8px 8px 0 0;">
+    Devlog
+  </div>
+  <div class="devlog-body" style="background:linear-gradient(180deg,#1e293b,#071421 60%);color:#cfe8ff;font-size:14px;padding:16px 14px 20px 14px;border-radius:0 0 8px 8px;border:1px solid #233045;">
+    <strong>2024-06-15</strong> – Added Devlog box!  
+    <ul>
+      <li>I'm just gonna be straight-forward, this whole site was literally built by nothing but AI and constant testing to make sure everything works out, the only thing I can't get right however is the algorithm, some find it to be working, some don't. So please, I beg of users who truly appreciate the time I wasted to make this site out of pure spite and frustration towards CR:TOA's current state, to use this more of a template or a testing ground rather than a perfect tool that you can do however you want with it and expect perfect results. If you want any small additional QoL changes made to the site (do not come complaining to me about the algorithm), ping or DM me anytime. - LazyGuardian</li>
+      <li>Edit directly in the HTML: find <code>devlog-body</code> and change anything you want!</li>
+      <li>This box is not affected by JavaScript or app resets.</li>
+    </ul>
+    <!--
+      To update the Devlog: Only change this HTML! Add new sections, write markdown-style lists, etc.
+    -->
+  </div>
+</section>
 
 <script>
 /* Final consolidated single-file app with requested fixes:
@@ -1082,348 +1114,212 @@ function showInvalidSelection(err){
     <div style="color:#9fb6d4;margin-top:6px">${err || 'Please adjust your selected shapes and try again.'}</div>`;
 }
 
-// ---- REPLACE YOUR EXISTING SOLVER CODE WITH THIS ----
-
 function runSolveOptimize(timeoutMs = 3500){
-  try {
-    _runSolveTryBothPriorities(timeoutMs);
-  } catch (e) {
-    console.error('Solver error', e);
-    placementsEl.innerHTML = `<div style="color:#fecaca;font-weight:700">Solver error — see console</div><div style="color:#9fb6d4;margin-top:6px">${String(e)}</div>`;
+  // For brevity and safety, the solver uses the same algorithm implemented previously and is robustly wrapped.
+  try{
+    _runSolverInternal(timeoutMs);
+  } catch(err){
+    console.error('Solver error', err);
+    placementsEl.innerHTML = `<div style="color:#fecaca;font-weight:700">Solver error — see console</div><div style="color:#9fb6d4;margin-top:6px">${String(err)}</div>`;
   }
 }
 
-function _runSolveTryBothPriorities(timeoutMs){
-  // We'll reuse the two-phase + swaps implementation but run it twice with different prioritySet.
-  // To avoid duplicating all code, create a small runner that accepts prioritySet and returns a result object.
-
-  // COPY of your two-phase-with-swaps core (slimmed to return results rather than write UI)
-  function twoPhaseWithSwapsRun(prioritySet, timeoutMs){
-    // NOTE: this function assumes access to the same globals used by your app:
-    // window.selectedInstances, window.shapeTypes, window.uniqueTypes, window.unlocked,
-    // generatePlacementsForShape, RARITY_VALUES, etc. It replicates the two-phase-with-swaps logic
-    // but returns an object { total, placements, tilesByRarity, setBonus1, setBonus2 }.
-    const instances = window.selectedInstances.slice();
-    const placementsByInstance = instances.map(inst => {
-      if(inst.rarity === 'unique'){
-        const rep = window.uniqueTypes.find(u => u.baseName === inst.baseName) || window.uniqueTypes.find(u => u.baseName === inst.shapeId) || { cells: inst.cells || [[0,0]] };
-        return generatePlacementsForShape({ id: rep.id, baseName: inst.baseName||inst.shapeId, cells: rep.cells });
-      } else {
-        const st = window.shapeTypes.find(s=>s.id===inst.shapeId);
-        return st ? generatePlacementsForShape(st) : [];
-      }
-    });
-
-    // quick mandatory check
-    for(let i=0;i<instances.length;i++){
-      const inst = instances[i];
-      if((inst.rarity==='super' || inst.rarity==='unique') && (!placementsByInstance[i] || placementsByInstance[i].length===0)){
-        return { ok:false, reason:'mandatory_unplaceable' };
-      }
+/* Internal solver implementation (copied in full for completeness) */
+function _runSolverInternal(timeoutMs){
+  const instances = window.selectedInstances.slice();
+  if(window.includeUnique){
+    const hasUniqueInst = instances.some(i=>i.rarity==='unique');
+    if(!hasUniqueInst){
+      showInvalidSelection('Include Unique is enabled but no Unique shape is selected.');
+      clearIncludedList(); return;
     }
+  }
 
-    // Helper scoring functions (same as in solver)
-    function computeSetBonus(sumTiles){
-      if(sumTiles < 9) return 0;
-      const increments = Math.floor((sumTiles - 9) / 3);
-      const capped = Math.min(increments, 4);
-      return 265 * (capped + 1);
+  if(instances.length === 0){
+    clearSolution(); placementsEl.innerHTML = 'No pieces selected.'; clearIncludedList(); return;
+  }
+
+  const placementsByInstance = instances.map(inst => {
+    if(inst.rarity === 'unique'){
+      const rep = window.uniqueTypes.find(u => u.baseName === inst.baseName) || window.uniqueTypes.find(u => u.baseName === inst.shapeId) || { cells: inst.cells || [[0,0]] };
+      const tempShape = { id: rep.id, baseName: inst.baseName || inst.shapeId, cells: rep.cells };
+      return generatePlacementsForShape(tempShape);
+    } else {
+      const st = window.shapeTypes.find(s=>s.id===inst.shapeId);
+      return st ? generatePlacementsForShape(st) : [];
     }
-    function computeScores(curTiles, uniqueIncluded){
-      const rrRare = curTiles.set1.rare*RARITY_VALUES.rare + curTiles.set2.rare*RARITY_VALUES.rare;
-      const rrEpic = curTiles.set1.epic*RARITY_VALUES.epic + curTiles.set2.epic*RARITY_VALUES.epic;
-      const rrSuper = curTiles.set1.super*RARITY_VALUES.super + curTiles.set2.super*RARITY_VALUES.super;
-      const rrSum = rrRare + rrEpic + rrSuper;
-      const total1 = curTiles.set1.rare+curTiles.set1.epic+curTiles.set1.super;
-      const total2 = curTiles.set2.rare+curTiles.set2.epic+curTiles.set2.super;
-      const overflow = Math.max(0,total1-21);
-      const set1ForBonus = Math.min(total1,21);
-      const set2ForBonus = total2 + overflow;
-      const setBonus1 = computeSetBonus(set1ForBonus);
-      const setBonus2 = computeSetBonus(set2ForBonus);
-      const uniqueBonus = uniqueIncluded ? RARITY_VALUES.unique : 0;
-      return { rrSum, setBonus1, setBonus2, total1, total2, uniqueBonus };
+  });
+
+  for(let i=0;i<instances.length;i++){
+    const inst = instances[i];
+    if((inst.rarity==='super' || inst.rarity==='unique') && placementsByInstance[i].length===0){
+      showInvalidSelection(`One or more ${inst.rarity==='super' ? 'Super Epic' : 'Unique'} pieces have no valid placement on the current unlocked grid. They must be placeable.`);
+      clearIncludedList(); return;
     }
+  }
 
-    // Phase1: pack prioritySet (try to reach 21)
-    function packPrioritySet(targetSet, thresholdTiles, timeMs){
-      const start = Date.now();
-      const idxs = instances.map((inst,i)=>({i, size:inst.size||0, rank:(inst.rarity==='unique'?0:inst.rarity==='super'?1:inst.rarity==='epic'?2:3)}))
-                           .filter(x => instances[x.i].set === targetSet)
-                           .sort((a,b)=> a.rank - b.rank || b.size - a.size)
-                           .map(x => x.i);
-      const used = new Set();
-      let bestLocal = { tiles:0, placements:[] };
-      function placeAdds(p){ return p.cells.map(([r,c]) => `${r},${c}`); }
-      function backtrack(pos, curTiles, chosen){
-        if(Date.now() - start > timeMs) return;
-        if(curTiles >= thresholdTiles){ bestLocal = { tiles: curTiles, placements: chosen.slice() }; return; }
-        if(pos >= idxs.length){ if(curTiles > bestLocal.tiles) bestLocal = { tiles: curTiles, placements: chosen.slice() }; return; }
-        const instIdx = idxs[pos];
-        const inst = instances[instIdx];
-        const opts = placementsByInstance[instIdx] || [];
-        for(const p of opts){
-          const keys = placeAdds(p);
-          let ok=true;
-          for(const k of keys){ const [r,c] = k.split(',').map(Number); if(!window.unlocked[r][c] || used.has(k)){ ok=false; break; } }
-          if(!ok) continue;
-          for(const k of keys) used.add(k);
-          chosen.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement:p, set: inst.set });
-          backtrack(pos+1, curTiles + (inst.size||0), chosen);
-          chosen.pop();
-          for(const k of keys) used.delete(k);
-          if(bestLocal.tiles >= thresholdTiles) return;
-        }
-        backtrack(pos+1, curTiles, chosen);
-      }
-      backtrack(0, 0, []);
-      return bestLocal;
-    }
+  const anyPlacement = placementsByInstance.some(arr=>arr.length>0);
+  if(!anyPlacement){ showInvalidSelection('No valid placement exists for any selected piece on the current unlocked grid.'); clearIncludedList(); return; }
 
-    // Phase2: place remaining given locked from phase1
-    function placeRemaining(lockedCells, timeMs){
-      const start = Date.now();
-      const used = new Set([...lockedCells]);
-      const usedIids = new Set();
-      // phase1 will give placements via packPrioritySet result; we will pass them in later
-      // Here we construct list of indices not in lockedUsedIids by caller
-      // We'll just construct a general routine and caller provides remaining indices
-      // But for ease, we will build remIdxs at call-time outside this function in the runner.
-      return { /* placeholder - actual runner will use a separate implementation */ };
-    }
+  let requiredSet1 = 0, requiredSet2 = 0;
+  const sel = dualSetSelect.value;
+  if(sel && sel !== 'none'){
+    const parts = (''+sel).split('-').map(x=>parseInt(x,10)||0);
+    if(parts.length===2){ requiredSet1 = Math.max(0, parts[0]); requiredSet2 = Math.max(0, parts[1]); }
+  }
 
-    // Now actual orchestration similar to earlier solver:
-    const phase1Timeout = Math.max(150, Math.floor(timeoutMs * 0.40));
-    const phase1Threshold = 21;
-    const phase1 = packPrioritySet(prioritySet, phase1Threshold, phase1Timeout);
-
-    // Build locked set
-    const locked = new Set();
-    for(const p of phase1.placements) for(const [r,c] of p.placement.cells) locked.add(`${r},${c}`);
-
-    // Now place remaining (full routine similar to earlier placeRemaining implementation)
-    function placeRemaining_impl(lockedCells, timeMs){
-      const start = Date.now();
-      const used = new Set([...lockedCells]);
-      const usedIids = new Set((phase1.placements||[]).map(p=>p.iid));
-      const remIdxs = instances.map((inst,i)=>i).filter(i=> !usedIids.has(instances[i].iid));
-      remIdxs.sort((a,b) => {
-        const rank = inst => (instances[inst].rarity==='unique'?0:instances[inst].rarity==='super'?1:instances[inst].rarity==='epic'?2:3);
-        if(rank(a)!==rank(b)) return rank(a)-rank(b);
-        return (instances[b].size||0) - (instances[a].size||0);
-      });
-      let bestLocal = { actualTotal:-1, placements:[], tilesByRarityBySet:{ set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, uniqueIncluded:false };
-      function placeAdds(p){ return p.cells.map(([r,c])=>`${r},${c}`); }
-      function backtrack(pos, curTiles, chosen, uniqueIncluded){
-        if(Date.now() - start > timeMs) return;
-        if(pos >= remIdxs.length){
-          const combined = JSON.parse(JSON.stringify(curTiles));
-          for(const p of (phase1.placements||[])){
-            const idx = instances.findIndex(x=>x.iid===p.iid);
-            if(idx>=0){
-              const r = p.rarity;
-              const tgt = instances[idx].set === 2 ? 'set2' : 'set1';
-              combined[tgt][r] = (combined[tgt][r]||0) + (instances[idx].size||0);
-            }
-          }
-          const sc = computeScores(combined, uniqueIncluded);
-          const total = sc.rrSum + sc.setBonus1 + sc.setBonus2 + (uniqueIncluded ? RARITY_VALUES.unique : 0);
-          if(total > bestLocal.actualTotal){
-            bestLocal.actualTotal = total;
-            bestLocal.placements = chosen.slice();
-            bestLocal.tilesByRarityBySet = combined;
-            bestLocal.uniqueIncluded = uniqueIncluded;
-          }
-          return;
-        }
-        const instIdx = remIdxs[pos];
-        const inst = instances[instIdx];
-        const opts = placementsByInstance[instIdx] || [];
-        const isUnique = inst.rarity === 'unique';
-        const mandatory = inst.rarity === 'super' || inst.rarity === 'unique';
-        for(const p of opts){
-          const keys = placeAdds(p);
-          let ok = true;
-          for(const k of keys){ if(used.has(k)){ ok=false; break; } const [r,c]=k.split(',').map(Number); if(!window.unlocked[r][c]){ ok=false; break; } }
-          if(!ok) continue;
-          for(const k of keys) used.add(k);
-          const target = inst.set === 2 ? 'set2' : 'set1';
-          curTiles[target][inst.rarity] = (curTiles[target][inst.rarity]||0) + inst.size;
-          chosen.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement: p, set: inst.set });
-          backtrack(pos+1, curTiles, chosen, uniqueIncluded || isUnique);
-          chosen.pop();
-          curTiles[target][inst.rarity] -= inst.size;
-          for(const k of keys) used.delete(k);
-        }
-        if(!mandatory) backtrack(pos+1, curTiles, chosen, uniqueIncluded);
-      }
-      backtrack(0, { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, [], false);
-      return bestLocal;
-    }
-
-    const phase2Timeout = Math.max(150, timeoutMs - phase1Timeout);
-    const phase2 = placeRemaining_impl(locked, phase2Timeout);
-
-    // initial final placements
-    let finalPlacements = (phase1.placements || []).concat(phase2.placements || []);
-    let bestTotal = phase2.actualTotal || 0;
-
-    // limited local-swap search (small swaps) - reuse earlier approach but constrained
-    const swapLimit = 2;
-    const maxTrials = 40;
-    const perTrialTimeout = Math.max(100, Math.floor(timeoutMs * 0.08));
-    const placedIids = finalPlacements.map(p=>p.iid);
-    const uniquePlacedIids = Array.from(new Set(placedIids));
-    const placedLen = uniquePlacedIids.length;
-    let trials = 0;
-
-    function* genRemovalSubsets(maxRemove){
-      for(let k=1;k<=maxRemove;k++){
-        if(placedLen <= 12){
-          // exhaustive
-          const comb = (arr, k) => {
-            const res=[]; const back=(s,cur)=>{ if(cur.length===k){ res.push(cur.slice()); return; } for(let i=s;i<arr.length;i++){ cur.push(arr[i]); back(i+1,cur); cur.pop(); } };
-            back(0,[]); return res;
-          };
-          const combos = comb(uniquePlacedIids, k);
-          for(const c of combos) yield c;
-        } else {
-          const samples = Math.min(20, Math.floor(maxTrials/(k+1)));
-          for(let s=0;s<samples;s++){
-            const picked = new Set();
-            while(picked.size < k){ const idx = Math.floor(Math.random()*placedLen); picked.add(uniquePlacedIids[idx]); }
-            yield Array.from(picked);
-          }
-        }
-      }
-    }
-
-    function trialRepack(removedIids, lockedFromPhase1ExceptRemoved, timeMs){
-      // quick full repack attempt (try place all instances respecting user sets, with lockedFromPhase1ExceptRemoved reserved)
-      const start = Date.now();
-      const used = new Set([...lockedFromPhase1ExceptRemoved]);
-      let bestLocal = { actualTotal:-1, placements:[], tilesByRarityBySet:null, uniqueIncluded:false };
-      const allIdxs = instances.map((_,i)=>i);
-      allIdxs.sort((a,b)=>{
-        const rRank = inst => (instances[inst].rarity==='unique'?0:instances[inst].rarity==='super'?1:instances[inst].rarity==='epic'?2:3);
-        if(rRank(a)!==rRank(b)) return rRank(a)-rRank(b);
-        return (instances[b].size||0) - (instances[a].size||0);
-      });
-      function placeAdds(p){ return p.cells.map(([r,c])=>`${r},${c}`); }
-      function backtrackAll(pos, curTiles, chosen, uniqueIncluded){
-        if(Date.now() - start > timeMs) return;
-        if(pos >= allIdxs.length){
-          const sc = computeScores(curTiles, uniqueIncluded);
-          const total = sc.rrSum + sc.setBonus1 + sc.setBonus2 + (uniqueIncluded ? RARITY_VALUES.unique : 0);
-          if(total > bestLocal.actualTotal){
-            bestLocal.actualTotal = total; bestLocal.placements = chosen.slice(); bestLocal.tilesByRarityBySet = JSON.parse(JSON.stringify(curTiles)); bestLocal.uniqueIncluded = uniqueIncluded;
-          }
-          return;
-        }
-        const instIdx = allIdxs[pos];
-        const inst = instances[instIdx];
-        const opts = placementsByInstance[instIdx] || [];
-        const isUnique = inst.rarity === 'unique';
-        const mandatory = isUnique || inst.rarity === 'super';
-        for(const p of opts){
-          const keys = placeAdds(p);
-          let ok=true;
-          for(const k of keys){ if(used.has(k)){ ok=false; break; } const [r,c]=k.split(',').map(Number); if(!window.unlocked[r][c]){ ok=false; break; } }
-          if(!ok) continue;
-          for(const k of keys) used.add(k);
-          const target = inst.set === 2 ? 'set2' : 'set1';
-          curTiles[target][inst.rarity] = (curTiles[target][inst.rarity]||0) + inst.size;
-          chosen.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement: p, set: inst.set });
-          backtrackAll(pos+1, curTiles, chosen, uniqueIncluded || isUnique);
-          chosen.pop();
-          curTiles[target][inst.rarity] -= inst.size;
-          for(const k of keys) used.delete(k);
-        }
-        if(!mandatory) backtrackAll(pos+1, curTiles, chosen, uniqueIncluded);
-      }
-      backtrackAll(0, { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, [], false);
-      return bestLocal;
-    }
-
-    for(const removedSet of genRemovalSubsets(swapLimit)){
-      if(trials >= maxTrials) break;
-      trials++;
-      // compute locked except removed
-      const removedSetSet = new Set(removedSet);
-      const trialLocked = new Set();
-      for(const p of phase1.placements || []){
-        if(!removedSetSet.has(p.iid)){
-          for(const [r,c] of p.placement.cells) trialLocked.add(`${r},${c}`);
-        }
-      }
-      const trialRes = trialRepack(removedSet, trialLocked, perTrialTimeout);
-      if(trialRes && trialRes.actualTotal > bestTotal){
-        bestTotal = trialRes.actualTotal;
-        finalPlacements = trialRes.placements;
-      }
-    }
-
-    // Score final placements
-    function scoreFromPlacements(placements){
-      const tilesByRarity = { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} };
-      let uniqueIncluded = false;
-      for(const p of placements){
-        const idx = instances.findIndex(x=>x.iid===p.iid);
-        if(idx<0) continue;
-        const inst = instances[idx];
-        if(inst.rarity === 'unique') uniqueIncluded = true;
-        const tgt = inst.set === 2 ? 'set2' : 'set1';
-        tilesByRarity[tgt][inst.rarity] = (tilesByRarity[tgt][inst.rarity]||0) + (inst.size||0);
-      }
-      const sc = computeScores(tilesByRarity, uniqueIncluded);
-      const total = sc.rrSum + sc.setBonus1 + sc.setBonus2 + (uniqueIncluded ? RARITY_VALUES.unique : 0);
-      return { total, sc, tilesByRarity, uniqueIncluded, placements };
-    }
-
-    const finalScore = scoreFromPlacements(finalPlacements);
-    return { ok:true, prioritySet: prioritySet, result: finalScore, placements: finalPlacements };
-  } // end twoPhaseWithSwapsRun
-
-  // Run both priority variants (and optionally a neutral run if you want)
-  const t1 = Math.floor(timeoutMs/2);
-  const t2 = timeoutMs - t1;
-  const res1 = twoPhaseWithSwapsRun(1, t1);
-  const res2 = twoPhaseWithSwapsRun(2, t2);
-
-  // choose best (compare total)
-  const validResults = [];
-  if(res1.ok) validResults.push(res1);
-  if(res2.ok) validResults.push(res2);
-  if(validResults.length === 0){
-    showInvalidSelection('No valid tiling found (both priority variants failed).');
-    clearIncludedList();
+  const totalUnlocked = countUnlockedTiles();
+  if(requiredSet1 + requiredSet2 > totalUnlocked){
+    showInvalidSelection('Selected Dual Set Bonus cannot be satisfied with current unlocked tiles.');
     return;
   }
-  validResults.sort((a,b) => b.result.total - a.result.total);
-  const best = validResults[0];
 
-  // Write UI using best result
-  const finalPlacements = best.placements || (best.result && best.result.placements) || [];
+  const idxs = instances.map((inst, idx)=>({ idx, rarityOrder: inst.rarity==='super' ? 0 : (inst.rarity==='unique' ? 0 : (inst.rarity==='epic'?1:2)), opts: placementsByInstance[idx].length || 0 }));
+  idxs.sort((a,b)=> a.rarityOrder - b.rarityOrder || a.opts - b.opts);
+  const indexMap = idxs.map(o=>o.idx);
+
+  function placeAdds(placement){ return placement.cells.map(([r,c])=>`${r},${c}`); }
+
+  function computeScores(curTiles, uniqueIncluded){
+    const rrRare = curTiles.set1.rare*RARITY_VALUES.rare + curTiles.set2.rare*RARITY_VALUES.rare;
+    const rrEpic = curTiles.set1.epic*RARITY_VALUES.epic + curTiles.set2.epic*RARITY_VALUES.epic;
+    const rrSuper = curTiles.set1.super*RARITY_VALUES.super + curTiles.set2.super*RARITY_VALUES.super;
+    const rrSum = rrRare + rrEpic + rrSuper;
+    const total1 = curTiles.set1.rare+curTiles.set1.epic+curTiles.set1.super;
+    const total2 = curTiles.set2.rare+curTiles.set2.epic+curTiles.set2.super;
+    const overflow = Math.max(0,total1-21);
+    const set1ForBonus = Math.min(total1,21);
+    const set2ForBonus = total2 + overflow;
+    const setBonus1 = computeSetBonus(set1ForBonus);
+    const setBonus2 = computeSetBonus(set2ForBonus);
+    const uniqueBonus = uniqueIncluded ? RARITY_VALUES.unique : 0;
+    return { rrSum, setBonus1, setBonus2, total1, total2, uniqueBonus };
+  }
+
+  function solveVariant(timeBudgetMs=1000, allowRares=true){
+    const start = Date.now();
+    const used = new Set();
+    let best = { actualTotal:-1, placements:[], tilesByRarityBySet:{set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0}}, rrSum:0, setBonus1:0, setBonus2:0, uniqueIncluded:false, supersPlaced:0, epicsPlaced:0 };
+
+    function backtrack(pos, curTiles, chosen, uniqueIncluded){
+      if(Date.now()-start > timeBudgetMs) return;
+      if(pos>=indexMap.length){
+        const mandatorySupers = instances.filter(x=>x.rarity==='super').length;
+        const mandatoryUnique = window.includeUnique ? instances.filter(x=>x.rarity==='unique').length : 0;
+        const supersPlaced = curTiles.set1.super + curTiles.set2.super;
+        if(supersPlaced < mandatorySupers) return;
+        if(mandatoryUnique > 0 && !uniqueIncluded) return;
+
+        const total1 = curTiles.set1.rare + curTiles.set1.epic + curTiles.set1.super;
+        const total2 = curTiles.set2.rare + curTiles.set2.epic + curTiles.set2.super;
+        if(total1 < requiredSet1) return;
+        if(total2 < requiredSet2) return;
+
+        const sc = computeScores(curTiles, uniqueIncluded);
+        const actualTotal = sc.rrSum + sc.setBonus1 + sc.setBonus2 + sc.uniqueBonus;
+        const epicsPlaced = curTiles.set1.epic + curTiles.set2.epic;
+
+        let better=false;
+        if(actualTotal > best.actualTotal) better=true;
+        else if(actualTotal === best.actualTotal){
+          if(supersPlaced > (best.supersPlaced||0)) better=true;
+          else if(supersPlaced === (best.supersPlaced||0)){
+            if(epicsPlaced > (best.epicsPlaced||0)) better=true;
+            else if(epicsPlaced === (best.epicsPlaced||0)){
+              const raresPlaced = curTiles.set1.rare + curTiles.set2.rare;
+              const bestRares = best.tilesByRarityBySet ? (best.tilesByRarityBySet.set1.rare + best.tilesByRarityBySet.set2.rare) : Infinity;
+              if(raresPlaced < bestRares) better=true;
+            }
+          }
+        }
+
+        if(better){
+          best.actualTotal = actualTotal;
+          best.rrSum = sc.rrSum;
+          best.setBonus1 = sc.setBonus1;
+          best.setBonus2 = sc.setBonus2;
+          best.uniqueIncluded = uniqueIncluded;
+          best.tilesByRarityBySet = JSON.parse(JSON.stringify(curTiles));
+          best.placements = chosen.slice();
+          best.supersPlaced = supersPlaced;
+          best.epicsPlaced = epicsPlaced;
+        }
+        return;
+      }
+
+      const instIdx = indexMap[pos];
+      const inst = instances[instIdx];
+      const opts = placementsByInstance[instIdx];
+      const isRare = inst.rarity === 'rare';
+      const isUnique = inst.rarity === 'unique';
+      const mandatory = inst.rarity === 'super' || inst.rarity === 'unique';
+
+      for(const p of opts){
+        if(isRare && !allowRares) continue;
+        const keys = placeAdds(p); let conflict=false;
+        for(const k of keys) if(used.has(k)){ conflict=true; break; }
+        if(conflict) continue;
+        for(const k of keys) used.add(k);
+        const target = inst.set===2 ? 'set2' : 'set1';
+        if(!isUnique) curTiles[target][inst.rarity] += inst.size;
+        chosen.push({ iid: inst.iid, shapeId: inst.shapeId, rarity: inst.rarity, placement: p, set: inst.set });
+        backtrack(pos+1, curTiles, chosen, uniqueIncluded || isUnique);
+        chosen.pop();
+        if(!isUnique) curTiles[target][inst.rarity] -= inst.size;
+        for(const k of keys) used.delete(k);
+      }
+      if(!mandatory) backtrack(pos+1, curTiles, chosen, uniqueIncluded);
+    }
+
+    backtrack(0, { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, [], false);
+    return best;
+  }
+
+  const t = Math.max(200, Math.floor(timeoutMs/3));
+  const a = solveVariant(t,false);
+  const a2 = solveVariant(t,true);
+  const b = solveVariant(t,false);
+  const b2 = solveVariant(t,true);
+  const cand = [a2,b2,a,b].filter(c => c && c.placements && c.placements.length>0);
+
+  if(cand.length===0){ showInvalidSelection('No valid tiling found (that satisfies the constraints).'); clearIncludedList(); return; }
+
+  cand.sort((x,y)=>{
+    if(x.actualTotal !== y.actualTotal) return y.actualTotal - x.actualTotal;
+    if((x.supersPlaced||0) !== (y.supersPlaced||0)) return (y.supersPlaced||0) - (x.supersPlaced||0);
+    if((x.epicsPlaced||0) !== (y.epicsPlaced||0)) return (y.epicsPlaced||0) - (x.epicsPlaced||0);
+    return 0;
+  });
+  const best = cand[0];
+
+  const bestTotal1 = (best.tilesByRarityBySet && best.tilesByRarityBySet.set1) ? (best.tilesByRarityBySet.set1.rare + best.tilesByRarityBySet.set1.epic + best.tilesByRarityBySet.set1.super) : 0;
+  const bestTotal2 = (best.tilesByRarityBySet && best.tilesByRarityBySet.set2) ? (best.tilesByRarityBySet.set2.rare + best.tilesByRarityBySet.set2.epic + best.tilesByRarityBySet.set2.super) : 0;
+  if(bestTotal1 < requiredSet1 || bestTotal2 < requiredSet2){
+    showInvalidSelection('No tiling found that satisfies the selected Dual Set Bonus targets.');
+    return;
+  }
+
   window.placedCells = {};
-  for(let i=0;i<finalPlacements.length;i++){
-    const p = finalPlacements[i];
-    const pid = 'P'+(i+1);
+  for(let i=0;i<best.placements.length;i++){
+    const p = best.placements[i];
+    const pid = 'P'+(i+1); // unique pid kept for grouping and save/load
+    // displayLabel shows S-1 or S-2 inside tiles (per set). set 0 use 'U'
     const displayLabel = (p.set === 1) ? 'S-1' : ((p.set === 2) ? 'S-2' : 'U');
     for(const [r,c] of p.placement.cells){
       window.placedCells[`${r},${c}`] = { pid, iid: p.iid, shapeId: p.shapeId, rarity: p.rarity, set: p.set, colorClass: sizeToColorClassForPlacement(p), displayLabel };
     }
   }
-
-  const tilesByRarity = best.result.tilesByRarity || { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} };
-  updateScoreboard(tilesByRarity, best.result.sc.setBonus1||0, best.result.sc.setBonus2||0);
+  updateScoreboard(best.tilesByRarityBySet || { set1:{rare:0,epic:0,super:0}, set2:{rare:0,epic:0,super:0} }, best.setBonus1 || 0, best.setBonus2 || 0);
   window.hasSolution = true;
   renderGrid();
-  placementsEl.innerHTML = `Best Total: ${best.result.total || 0} (prioritySet ${best.prioritySet})`;
-  renderIncludedList(finalPlacements);
+  placementsEl.innerHTML = '';
+  const displayTotal = (best.rrSum || 0) + (best.setBonus1 || 0) + (best.setBonus2 || 0) + (best.uniqueIncluded ? RARITY_VALUES.unique : 0);
+  const suffix = best.uniqueIncluded ? ' — Unique shape included' : '';
+  placementsEl.appendChild(document.createTextNode(`Best Total: ${displayTotal}${suffix}`));
+  renderIncludedList(best.placements);
   updateExtraIndicator();
 }
 
-// ---- END OF CODE TO REPLACE ----
 /* ---------- Save/load (robust) ---------- */
 function sanitizeSlot(slot){
   if(!slot || typeof slot !== 'object') return null;
