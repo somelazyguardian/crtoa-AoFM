@@ -1418,7 +1418,7 @@ function _runSolveTryBothPriorities(timeoutMs){
   updateScoreboard(tilesByRarity, best.result.sc.setBonus1||0, best.result.sc.setBonus2||0);
   window.hasSolution = true;
   renderGrid();
-  placementsEl.innerHTML = `Best Total: ${best.result.total || 0};
+  placementsEl.innerHTML = `Best Total: ${best.result.total || 0} (prioritySet ${best.prioritySet})`;
   renderIncludedList(finalPlacements);
   updateExtraIndicator();
 }
